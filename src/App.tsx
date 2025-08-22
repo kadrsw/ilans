@@ -18,6 +18,8 @@ import { CategoryPage } from './pages/CategoryPage';
 import { LocationPage } from './pages/LocationPage';
 import { CVBuilderPage } from './pages/CVBuilderPage';
 import { PrivacyPolicyPage } from './pages/PrivacyPolicyPage';
+import { PaymentSuccessPage } from './pages/PaymentSuccessPage';
+import { PaymentCancelPage } from './pages/PaymentCancelPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 
 export function App() {
@@ -36,6 +38,10 @@ export function App() {
                 <Route path="/sifremi-unuttum" element={<ForgotPasswordPage />} />
                 <Route path="/cv-olustur" element={<CVBuilderPage />} />
                 <Route path="/gizlilik-politikasi" element={<PrivacyPolicyPage />} />
+                
+                {/* Payment Routes */}
+                <Route path="/odeme/basarili" element={<PaymentSuccessPage />} />
+                <Route path="/odeme/iptal" element={<PaymentCancelPage />} />
                 
                 {/* SEO-friendly job routes */}
                 <Route path="/is-ilanlari/:category" element={<CategoryPage />} />

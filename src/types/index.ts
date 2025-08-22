@@ -25,6 +25,9 @@ export interface JobFormData {
   jobId?: string;
   createdAt?: number;
   isDisabledFriendly?: boolean;
+  isPremium?: boolean;
+  isPromoted?: boolean;
+  promotionExpiresAt?: number;
 }
 
 // İş ilanı tipi
@@ -34,4 +37,29 @@ export interface JobListing extends JobFormData {
   createdAt: number;
   status: 'active' | 'inactive' | 'expired';
   updatedAt?: number;
+  isPremium?: boolean;
+  isPromoted?: boolean;
+  promotionExpiresAt?: number;
+}
+
+// PYTR Ödeme tipi
+export interface PaymentData {
+  amount: number;
+  currency: string;
+  orderId: string;
+  jobId: string;
+  userId: string;
+  promotionType: 'premium' | 'highlight' | 'top';
+  promotionDuration: number; // days
+}
+
+// Ödeme durumu
+export interface PaymentStatus {
+  id: string;
+  status: 'pending' | 'completed' | 'failed' | 'cancelled';
+  amount: number;
+  createdAt: number;
+  completedAt?: number;
+  paymentMethod?: string;
+  transactionId?: string;
 }

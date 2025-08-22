@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Building2, Clock, Briefcase, Home, Clock as ClockIcon, ExternalLink, Calendar, DollarSign } from 'lucide-react';
+import { MapPin, Building2, Clock, Briefcase, Home, Clock as ClockIcon, ExternalLink, Calendar, DollarSign, Star, TrendingUp } from 'lucide-react';
 import { formatDate } from '../../utils/dateUtils';
 import { generateJobUrl } from '../../utils/seoUtils';
 import { Pagination } from '../ui/Pagination';
@@ -86,27 +86,6 @@ export function JobList({ jobs }: JobListProps) {
     </div>
   );
 
-  const SponsoredGaming = () => (
-    <div className="card bg-gradient-to-r from-purple-50 to-purple-100 border-purple-200">
-      <a
-        href="https://www.ultraortaklik6.com/links/?btag=1707444"
-        target="_blank"
-        rel="noopener noreferrer sponsored"
-        className="flex items-center gap-4 hover:opacity-90 transition-opacity"
-      >
-        <div className="p-3 bg-purple-500 rounded-xl">
-          <Briefcase className="h-6 w-6 text-white" />
-        </div>
-        <div className="flex-1">
-          <div className="font-semibold text-purple-900 mb-1">Güvenilir Sanal Oyunlar</div>
-          <div className="text-sm text-purple-700">Online Oyun Platformu</div>
-          <div className="text-xs text-purple-600 mt-1">Sponsorlu İçerik</div>
-        </div>
-        <ExternalLink className="h-5 w-5 text-purple-600" />
-      </a>
-    </div>
-  );
-
   if (jobs.length === 0) {
     return (
       <div className="text-center py-16">
@@ -144,18 +123,28 @@ export function JobList({ jobs }: JobListProps) {
       <div className="space-y-4">
         {paginatedItems.map((job, index) => {
           const showSponsored = (index + 1) % 7 === 0; // Her 7 ilandan sonra sponsorlu içerik
+          const isPremium = job.isPremium || job.isPromoted;
           
           return (
             <React.Fragment key={job.id}>
-              <article className="job-card group cursor-pointer" onClick={() => handleJobClick(job)}>
+              <article className={`job-card group cursor-pointer ${isPremium ? 'ring-2 ring-yellow-400 bg-gradient-to-r from-yellow-50 to-orange-50' : ''}`} onClick={() => handleJobClick(job)}>
                 <div className="space-y-4">
+                  {/* Premium Badge */}
+                  {isPremium && (
+                    <div className="flex items-center gap-2 text-yellow-700 bg-yellow-100 px-3 py-1 rounded-full text-sm font-medium w-fit">
+                      <Star className="h-4 w-4 fill-current" />
+                      <span>Öne Çıkarılmış</span>
+                      <TrendingUp className="h-4 w-4" />
+                    </div>
+                  )}
+
                   {/* Header */}
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
-                      <h2 className="text-lg sm:text-xl font-semibold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2">
+                      <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-900 group-hover:text-blue-600 transition-colors leading-tight mb-2">
                         {job.title}
                       </h2>
-                      <p className="text-base text-gray-700 font-medium mt-1">{job.company}</p>
+                      <p className="text-base sm:text-lg text-gray-700 font-medium">{job.company}</p>
                     </div>
                     
                     <div className="flex flex-wrap gap-2">
@@ -164,7 +153,7 @@ export function JobList({ jobs }: JobListProps) {
                           Yeni
                         </span>
                       )}
-                      {job.salary && (
+                      {job.salary && job.salary !== '0' && (
                         <span className="badge badge-salary flex items-center gap-1">
                           <DollarSign className="h-3 w-3" />
                           {job.salary}
@@ -173,33 +162,33 @@ export function JobList({ jobs }: JobListProps) {
                     </div>
                   </div>
 
-                  {/* Meta Information */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                  {/* Description - Mobilde daha iyi görünüm */}
+                  <p className="text-gray-600 line-clamp-2 sm:line-clamp-3 leading-relaxed text-sm sm:text-base">
+                    {job.description}
+                  </p>
+
+                  {/* Meta Information - Mobilde daha kompakt */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 text-xs sm:text-sm">
                     <div className="meta-info">
-                      <MapPin className="h-4 w-4 mr-2 text-gray-400" />
+                      <MapPin className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 text-gray-400" />
                       <span className="truncate">{job.location}</span>
                     </div>
                     
                     <div className="meta-info">
-                      <Building2 className="h-4 w-4 mr-2 text-gray-400" />
+                      <Building2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 text-gray-400" />
                       <span className="truncate">{job.type}</span>
                     </div>
                     
                     <div className="meta-info">
-                      <Calendar className="h-4 w-4 mr-2 text-gray-400" />
+                      <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 text-gray-400" />
                       <span className="truncate">{formatDate(job.createdAt)}</span>
                     </div>
                     
                     <div className="meta-info">
-                      <Briefcase className="h-4 w-4 mr-2 text-gray-400" />
+                      <Briefcase className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 text-gray-400" />
                       <span className="truncate">{job.category}</span>
                     </div>
                   </div>
-
-                  {/* Description */}
-                  <p className="text-gray-600 line-clamp-2 leading-relaxed">
-                    {job.description}
-                  </p>
 
                   {/* Footer */}
                   <div className="flex items-center justify-between pt-2 border-t border-gray-100">
@@ -215,9 +204,8 @@ export function JobList({ jobs }: JobListProps) {
 
               {showSponsored && (
                 <div className="space-y-4">
-                  {index % 21 === 6 && <SponsoredEvimCep />}
-                  {index % 21 === 13 && <SponsoredMesailerim />}
-                  {index % 21 === 20 && <SponsoredGaming />}
+                  {index % 14 === 6 && <SponsoredEvimCep />}
+                  {index % 14 === 13 && <SponsoredMesailerim />}
                 </div>
               )}
             </React.Fragment>

@@ -14,7 +14,15 @@ export function HomePage() {
   const { user } = useAuthContext();
   const { pageNumber } = useParams();
   const [searchTerm, setSearchTerm] = useState('');
-  const { jobs, categories, loading, error } = useJobs(undefined, searchTerm);
+  const [initialLoad, setInitialLoad] = useState(true);
+  
+  // İlk yüklemede sadece 20 ilan al
+  const { jobs, categories, loading, error } = useJobs(
+    undefined, 
+    searchTerm, 
+    initialLoad ? 20 : undefined
+  );
+  
   const { filters, updateFilters, filteredJobs } = useJobFilters(jobs);
 
   useEffect(() => {
@@ -29,7 +37,15 @@ export function HomePage() {
         sessionStorage.removeItem('previousPath');
       }, 100);
     }
-  }, [pageNumber]);
+
+    // 3 saniye sonra tüm ilanları yükle
+    if (initialLoad) {
+      const timer = setTimeout(() => {
+        setInitialLoad(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [pageNumber, initialLoad]);
 
   const getCategoryName = (categoryId: string) => {
     const category = jobCategories.find(c => c.id === categoryId);
@@ -72,9 +88,14 @@ export function HomePage() {
             <h2 className="text-2xl font-bold">
               {filters.category ? getCategoryName(filters.category) : 'Tüm İlanlar'}
             </h2>
+            {initialLoad && (
+              <div className="text-sm text-blue-600 animate-pulse">
+                Daha fazla ilan yükleniyor...
+              </div>
+            )}
           </div>
 
-          {loading ? (
+          {loading && jobs.length === 0 ? (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto" />
             </div>

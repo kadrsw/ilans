@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { ref, query, orderByChild, onValue, equalTo } from 'firebase/database';
+import { ref, query, orderByChild, onValue, equalTo, limitToFirst } from 'firebase/database';
 import { db } from '../lib/firebase';
 import type { JobListing } from '../types';
 
-export function useJobs(categoryFilter?: string, searchTerm?: string) {
+export function useJobs(categoryFilter?: string, searchTerm?: string, limit?: number) {
   const [jobs, setJobs] = useState<JobListing[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -11,9 +11,13 @@ export function useJobs(categoryFilter?: string, searchTerm?: string) {
 
   useEffect(() => {
     const jobsRef = ref(db, 'jobs');
+    
+    // İlk yüklemede sadece 20 ilan al, sonra tümünü yükle
     const jobsQuery = categoryFilter 
       ? query(jobsRef, orderByChild('category'), equalTo(categoryFilter))
-      : query(jobsRef, orderByChild('createdAt'));
+      : limit 
+        ? query(jobsRef, orderByChild('createdAt'), limitToFirst(limit))
+        : query(jobsRef, orderByChild('createdAt'));
 
     const unsubscribe = onValue(jobsQuery, (snapshot) => {
       try {
@@ -53,8 +57,17 @@ export function useJobs(categoryFilter?: string, searchTerm?: string) {
           });
         }
 
-        // Yeni ilanlar en üstte olacak şekilde sırala (createdAt'e göre azalan)
-        setJobs(jobsList.sort((a, b) => b.createdAt - a.createdAt));
+        // Öne çıkarılmış ilanları en üste koy, sonra tarihe göre sırala
+        const sortedJobs = jobsList.sort((a, b) => {
+          // Önce premium ilanları sırala
+          if (a.isPremium && !b.isPremium) return -1;
+          if (!a.isPremium && b.isPremium) return 1;
+          
+          // Sonra tarihe göre sırala (yeni olanlar önce)
+          return b.createdAt - a.createdAt;
+        });
+
+        setJobs(sortedJobs);
         setCategories(newCategories);
         setLoading(false);
         setError(null);
@@ -70,7 +83,7 @@ export function useJobs(categoryFilter?: string, searchTerm?: string) {
     });
 
     return () => unsubscribe();
-  }, [categoryFilter, searchTerm]);
+  }, [categoryFilter, searchTerm, limit]);
 
   return { jobs, categories, loading, error };
 }
