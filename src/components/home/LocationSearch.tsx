@@ -29,27 +29,27 @@ export function LocationSearch({ onLocationChange }: LocationSearchProps) {
 
   return (
     <div className="relative">
-      <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+      <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 h-5 w-5" />
       <input
         type="text"
         value={inputValue}
-        placeholder="Şehir seçin"
+        placeholder="Şehir seçin... (İstanbul, Ankara, İzmir, Bursa, Antalya)"
         onChange={handleInputChange}
         onFocus={() => setShowSuggestions(true)}
         onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
-        className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder-gray-500"
+        className="w-full pl-12 pr-4 py-4 rounded-xl border-2 border-gray-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 text-gray-900 placeholder-gray-500 text-base font-medium shadow-sm"
       />
 
       {showSuggestions && (
-        <div className="absolute z-10 w-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 max-h-60 overflow-y-auto">
+        <div className="absolute z-50 w-full mt-2 bg-white rounded-xl shadow-xl border-2 border-gray-200 max-h-64 overflow-y-auto">
           {filteredCities.length === 0 ? (
-            <div className="px-4 py-2 text-gray-500">Şehir bulunamadı</div>
+            <div className="px-4 py-3 text-gray-500 text-sm">🏙️ Şehir bulunamadı</div>
           ) : (
-            filteredCities.map((city) => (
+            filteredCities.slice(0, 10).map((city) => (
               <button
                 key={city}
                 onClick={() => handleCitySelect(city)}
-                className="w-full text-left px-4 py-2 text-gray-900 hover:bg-blue-50 focus:bg-blue-50 focus:outline-none"
+                className="w-full text-left px-4 py-3 text-gray-900 hover:bg-red-50 hover:text-red-700 focus:bg-red-50 focus:outline-none transition-colors text-sm font-medium touch-target"
               >
                 {city}
               </button>

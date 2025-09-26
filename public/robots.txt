@@ -1,48 +1,107 @@
 User-agent: *
 Allow: /
 
-# Allow all job listings and CV pages
+# Kritik SEO sayfaları - Google Search Console verilerine göre optimize edilmiş
 Allow: /is-ilanlari/
 Allow: /ilan/
 Allow: /cv-olustur
 Allow: /sayfa/
+Allow: /istanbul-is-ilanlari
+Allow: /ankara-is-ilanlari
+Allow: /izmir-is-ilanlari
+Allow: /bursa-is-ilanlari
+Allow: /antalya-is-ilanlari
+Allow: /part-time-is-ilanlari
+Allow: /remote-is-ilanlari
+Allow: /yeni-mezun-is-ilanlari
+Allow: /muhendis-is-ilanlari
+Allow: /garson-is-ilanlari
+Allow: /kurye-is-ilanlari
+Allow: /resepsiyon-gorevlisi-is-ilanlari
+Allow: /asci-yardimcisi-is-ilanlari
+Allow: /ozel-guvenlik-is-ilanlari
+Allow: /dme-group-cagri-merkezi
+Allow: /getir-kurye-is-ilanlari
+Allow: /dominos-pizza-is-ilanlari
+Allow: /burger-king-is-ilanlari
+Allow: /yuksek-maasli-is-ilanlari
+Allow: /dolgun-maasli-is-ilanlari
+Allow: /home-office-cagri-merkezi
+Allow: /evde-paketleme-is-ilanlari
+Allow: /bahcelievler-kurye-is-ilanlari
+Allow: /akkuyu-nukleer-santral-is-ilanlari
+Allow: /yatili-is-ilanlari
+Allow: /cagri-merkezi-is-ilanlari
 
-# Prevent duplicate content
+# Admin ve kullanıcı sayfalarını engelle
 Disallow: /giris
 Disallow: /kayit
 Disallow: /sifremi-unuttum
 Disallow: /hesap-ayarlari
 Disallow: /ilanlarim
+Disallow: /ilan-ver
+Disallow: /ilan-duzenle/
+Disallow: /ilan-one-cikar/
 Disallow: /admin
+Disallow: /api/
+Disallow: /temp/
+Disallow: /_next/
+Disallow: /node_modules/
+Disallow: /odeme/
+Disallow: /favoriler
 
-# Allow AdSense crawler
+# Duplicate content engelleme - Google Search Console sorunlarına göre
+Disallow: /*?*
+Disallow: /*#*
+Disallow: /search?*
+Disallow: /filter?*
+Disallow: /*utm_*
+Disallow: /*ref=*
+Disallow: /*source=*
+
+# AdSense crawler'a izin ver
 User-agent: Mediapartners-Google
 Allow: /
 
-# Allow Google Display Ads Bot
+# Google Display Ads Bot'a izin ver
 User-agent: Google-Display-Ads-Bot
 Allow: /
 
-# Allow Googlebot
+# Googlebot için özel ayarlar - Performans optimizasyonu
 User-agent: Googlebot
 Allow: /
-Crawl-delay: 1
+Crawl-delay: 0.5
 
-# Allow Bingbot
+# Bingbot için özel ayarlar - Performans optimizasyonu
 User-agent: Bingbot
 Allow: /
-Crawl-delay: 1
+Crawl-delay: 0.5
 
-# Allow Yandex
+# Yandex için özel ayarlar - Performans optimizasyonu
 User-agent: YandexBot
 Allow: /
-Crawl-delay: 1
+Crawl-delay: 0.5
 
-# Sitemap locations
+# Diğer arama motorları
+User-agent: DuckDuckBot
+Allow: /
+
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: Twitterbot
+Allow: /
+
+User-agent: LinkedInBot
+Allow: /
+
+# Sitemap konumları - Google Search Console için
 Sitemap: https://isilanlarim.org/sitemap.xml
 Sitemap: https://isilanlarim.org/sitemap-jobs.xml
 Sitemap: https://isilanlarim.org/sitemap-static.xml
 Sitemap: https://isilanlarim.org/sitemap-pages.xml
+Sitemap: https://isilanlarim.org/sitemap-categories.xml
+Sitemap: https://isilanlarim.org/sitemap-cities.xml
 
 # Host directive
 Host: https://isilanlarim.org

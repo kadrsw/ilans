@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Pencil, Trash2, AlertTriangle, TrendingUp } from 'lucide-react';
+import { Pencil, Trash2, AlertTriangle, Crown, TrendingUp } from 'lucide-react';
 import { Button } from '../components/ui/Button';
-import { PromoteJobButton } from '../components/promotion/PromoteJobButton';
 import { useMyJobs } from '../hooks/useMyJobs';
 import { useJobActions } from '../hooks/useJobActions';
+import { PremiumBadge } from '../components/premium/PremiumBadge';
+import { formatDate, formatDateTime, getTimeAgo } from '../utils/dateUtils';
 
 export function MyJobsPage() {
   const navigate = useNavigate();
@@ -13,12 +14,15 @@ export function MyJobsPage() {
   const [jobToDelete, setJobToDelete] = useState<string | null>(null);
 
   const handleDeleteClick = (jobId: string) => {
+    setJobToDelete(jobId);
     if (window.confirm('Bu ilanı silmek istediğinizden emin misiniz?')) {
       deleteJob(jobId).then((success) => {
         if (success) {
           setJobToDelete(null);
         }
       });
+    } else {
+      setJobToDelete(null);
     }
   };
 
@@ -67,19 +71,19 @@ export function MyJobsPage() {
           {jobs.map((job) => {
             const expiresIn = Math.ceil((job.createdAt + (60 * 24 * 60 * 60 * 1000) - Date.now()) / (24 * 60 * 60 * 1000));
             const isExpiringSoon = expiresIn <= 7;
-            const isPremium = job.isPremium || job.isPromoted;
+            const isPremium = job.isPremium && job.premiumEndDate && job.premiumEndDate > Date.now();
+            const premiumPackage = job.premiumPackage as 'daily' | 'weekly' | 'monthly' | undefined;
             
             return (
-              <div key={job.id} className={`bg-white p-6 rounded-lg shadow-sm ${isPremium ? 'ring-2 ring-yellow-400 bg-gradient-to-r from-yellow-50 to-orange-50' : ''}`}>
+              <div key={job.id} className={`bg-white p-6 rounded-lg shadow-sm ${
+                isPremium ? 'border-2 border-blue-300 bg-gradient-to-r from-blue-50 to-purple-50' : ''
+              }`}>
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
+                    <div className="flex items-center gap-2 mb-1">
                       <h3 className="text-lg font-semibold">{job.title}</h3>
-                      {isPremium && (
-                        <div className="flex items-center gap-1 text-yellow-600 bg-yellow-100 px-2 py-1 rounded-full text-xs font-medium">
-                          <TrendingUp className="h-3 w-3" />
-                          Öne Çıkarılmış
-                        </div>
+                      {isPremium && premiumPackage && (
+                        <PremiumBadge packageType={premiumPackage} />
                       )}
                     </div>
                     <p className="text-gray-600">{job.company}</p>
@@ -94,11 +98,15 @@ export function MyJobsPage() {
                       <div className="text-sm text-gray-500">
                         Çalışma Şekli: {job.type}
                       </div>
-                      {job.salary && job.salary !== '0' && (
+                      {job.salary && (
                         <div className="text-sm font-medium text-green-600">
                           Maaş: {job.salary}
                         </div>
                       )}
+                      
+                      <div className="text-sm text-gray-500">
+                        Yayın Tarihi: <span title={formatDateTime(job.createdAt)}>{formatDate(job.createdAt)}</span> ({getTimeAgo(job.createdAt)})
+                      </div>
                       
                       {isExpiringSoon && (
                         <div className="flex items-center gap-1 text-sm text-orange-600">
@@ -108,22 +116,20 @@ export function MyJobsPage() {
                           </span>
                         </div>
                       )}
-
-                      {isPremium && job.promotionExpiresAt && (
-                        <div className="text-sm text-yellow-600">
-                          Promosyon bitiş: {new Date(job.promotionExpiresAt).toLocaleDateString('tr-TR')}
-                        </div>
-                      )}
                     </div>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <PromoteJobButton
-                      jobId={job.id}
-                      jobTitle={job.title}
-                      isPremium={isPremium}
-                    />
-                    
+                  <div className="flex space-x-2">
+                    {!isPremium && (
+                      <Button
+                        variant="outline"
+                        onClick={() => navigate(`/ilan-one-cikar/${job.id}`)}
+                        className="flex items-center gap-1 text-purple-600 hover:bg-purple-50"
+                      >
+                        <TrendingUp className="h-4 w-4" />
+                        <span className="hidden sm:inline">Öne Çıkar</span>
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       onClick={() => navigate(`/ilan-duzenle/${job.id}`)}
@@ -132,7 +138,6 @@ export function MyJobsPage() {
                       <Pencil className="h-4 w-4" />
                       <span className="hidden sm:inline">Düzenle</span>
                     </Button>
-                    
                     <Button
                       variant="outline"
                       className="flex items-center gap-1 text-red-600 hover:bg-red-50"

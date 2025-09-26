@@ -1,191 +1,315 @@
-import { ref, push, update, get } from 'firebase/database';
-import { db } from '../lib/firebase';
-import type { PaymentData, PaymentStatus, JobListing } from '../types';
+import CryptoJS from 'crypto-js';
 
-// PYTR ödeme fiyatları (TL)
-export const PROMOTION_PRICES = {
-  premium: {
-    7: 25,   // 7 gün öne çıkarma - 25 TL
-    15: 45,  // 15 gün öne çıkarma - 45 TL
-    30: 75   // 30 gün öne çıkarma - 75 TL
+const MERCHANT_ID = import.meta.env.VITE_PYTR_MERCHANT_ID;
+const MERCHANT_KEY = import.meta.env.VITE_PYTR_MERCHANT_KEY;
+const MERCHANT_SALT = import.meta.env.VITE_PYTR_MERCHANT_SALT;
+const API_URL = 'https://www.paytr.com/odeme/api/get-token';
+const SUCCESS_URL = import.meta.env.VITE_PYTR_SUCCESS_URL;
+const FAIL_URL = import.meta.env.VITE_PYTR_FAIL_URL;
+
+export const paymentPackages = [
+  {
+    id: 'daily',
+    name: '1 Günlük Öne Çıkarma',
+    duration: 1,
+    price: 9.99,
+    features: [
+      'İlanınız 1 gün boyunca öne çıkar',
+      'Daha fazla görüntülenme',
+      'Hızlı başvuru alın'
+    ]
   },
-  highlight: {
-    7: 15,   // 7 gün vurgulama - 15 TL
-    15: 25,  // 15 gün vurgulama - 25 TL
-    30: 40   // 30 gün vurgulama - 40 TL
+  {
+    id: 'weekly',
+    name: '1 Haftalık Öne Çıkarma',
+    duration: 7,
+    price: 29.99,
+    features: [
+      'İlanınız 7 gün boyunca öne çıkar',
+      '3x daha fazla görüntülenme',
+      'Premium rozet',
+      'Öne çıkan renk'
+    ],
+    popular: true
   },
-  top: {
-    7: 35,   // 7 gün en üstte - 35 TL
-    15: 60,  // 15 gün en üstte - 60 TL
-    30: 100  // 30 gün en üstte - 100 TL
+  {
+    id: 'monthly',
+    name: '1 Aylık Öne Çıkarma',
+    duration: 30,
+    price: 89.99,
+    features: [
+      'İlanınız 30 gün boyunca öne çıkar',
+      '5x daha fazla görüntülenme',
+      'Premium rozet',
+      'Öne çıkan renk',
+      'Öncelikli destek'
+    ]
   }
-};
+];
 
 export class PaymentService {
-  private static instance: PaymentService;
-  private pytrConfig = {
-    merchantId: '', // PYTR'den alınacak
-    apiKey: '',     // PYTR'den alınacak
-    secretKey: '',  // PYTR'den alınacak
-    baseUrl: 'https://api.pytr.com/v1', // PYTR API URL'si
-    returnUrl: `${window.location.origin}/odeme/basarili`,
-    cancelUrl: `${window.location.origin}/odeme/iptal`
-  };
-
-  public static getInstance(): PaymentService {
-    if (!PaymentService.instance) {
-      PaymentService.instance = new PaymentService();
-    }
-    return PaymentService.instance;
+  private generatePaytrToken(data: any): string {
+    console.log('🔐 PayTR token oluşturuluyor...');
+    
+    const hashStr = `${data.merchant_id}${data.user_ip}${data.merchant_oid}${data.email}${data.payment_amount}${data.user_basket}${data.no_installment}${data.max_installment}${data.user_name}${data.user_address}${data.user_phone}${data.merchant_ok_url}${data.merchant_fail_url}${data.timeout_limit}${data.currency}${data.test_mode}${MERCHANT_SALT}`;
+    
+    console.log('🔗 Hash string uzunluğu:', hashStr.length);
+    
+    // PayTR'nin istediği hash formatı: MD5 + SHA256
+    const token = CryptoJS.MD5(hashStr).toString();
+    const finalToken = CryptoJS.SHA256(`${token}${MERCHANT_KEY}`).toString();
+    
+    console.log('✅ PayTR token oluşturuldu, uzunluk:', finalToken.length);
+    
+    return finalToken;
   }
 
-  // PYTR konfigürasyonunu güncelle
-  public updateConfig(config: Partial<typeof this.pytrConfig>) {
-    this.pytrConfig = { ...this.pytrConfig, ...config };
-  }
-
-  // Ödeme başlatma
-  public async initiatePayment(paymentData: PaymentData): Promise<{ paymentUrl: string; paymentId: string }> {
+  async createPayment(
+    jobId: string,
+    packageId: string,
+    userEmail: string,
+    userName: string,
+    userPhone: string,
+    userAddress: string
+  ): Promise<{ success: boolean; token?: string; iframeToken?: string; paymentUrl?: string; error?: string }> {
     try {
-      // Firebase'e ödeme kaydı oluştur
-      const paymentRef = ref(db, 'payments');
-      const paymentRecord: PaymentStatus = {
-        id: '',
-        status: 'pending',
-        amount: paymentData.amount,
-        createdAt: Date.now()
-      };
-
-      const newPaymentRef = await push(paymentRef, paymentRecord);
-      const paymentId = newPaymentRef.key!;
-
-      // PYTR API'sine ödeme isteği gönder
-      const pytrPayload = {
-        merchant_id: this.pytrConfig.merchantId,
-        amount: paymentData.amount * 100, // Kuruş cinsinden
-        currency: 'TRY',
-        order_id: paymentData.orderId,
-        return_url: `${this.pytrConfig.returnUrl}?payment_id=${paymentId}&job_id=${paymentData.jobId}`,
-        cancel_url: `${this.pytrConfig.cancelUrl}?payment_id=${paymentId}`,
-        description: `İlan öne çıkarma - ${paymentData.promotionType}`,
-        customer_email: '', // Kullanıcı emaili
-        customer_name: '',  // Kullanıcı adı
-        items: [{
-          name: `İlan Öne Çıkarma - ${paymentData.promotionDuration} Gün`,
-          price: paymentData.amount * 100,
-          quantity: 1
-        }]
-      };
-
-      // PYTR API çağrısı (gerçek implementasyon PYTR dokümantasyonuna göre yapılacak)
-      const response = await fetch(`${this.pytrConfig.baseUrl}/payments`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.pytrConfig.apiKey}`
-        },
-        body: JSON.stringify(pytrPayload)
+      console.log('🚀 PayTR ödeme başlatılıyor:', {
+        jobId,
+        packageId,
+        userEmail,
+        userName: userName.substring(0, 3) + '***',
+        userPhone: userPhone.substring(0, 3) + '***'
       });
 
+      // Parametreleri doğrula
+      if (!userEmail || !userEmail.includes('@')) {
+        console.error('❌ Geçersiz e-posta:', userEmail);
+        return { success: false, error: 'Geçerli bir e-posta adresi gerekli' };
+      }
+      
+      if (!userName || userName.trim().length < 2) {
+        console.error('❌ Geçersiz ad soyad:', userName);
+        return { success: false, error: 'Geçerli bir ad soyad gerekli' };
+      }
+      
+      if (!userPhone || userPhone.replace(/[^0-9]/g, '').length < 10) {
+        console.error('❌ Geçersiz telefon:', userPhone);
+        return { success: false, error: 'Geçerli bir telefon numarası gerekli' };
+      }
+      
+      const selectedPackage = paymentPackages.find(p => p.id === packageId);
+      if (!selectedPackage) {
+        console.error('❌ Geçersiz paket:', packageId);
+        return { success: false, error: 'Geçersiz paket seçimi' };
+      }
+
+      console.log('✅ Parametreler doğrulandı, paket:', selectedPackage);
+
+      // PayTR için alfanumerik merchant_oid oluştur (özel karakter yok)
+      const cleanJobId = jobId.replace(/[^a-zA-Z0-9]/g, '').substring(0, 8);
+      const timestamp = Date.now().toString();
+      const merchantOid = `JOB${cleanJobId}${timestamp.substring(-8)}`;
+      
+      // Merchant OID'nin alfanumerik olduğundan emin ol
+      const finalMerchantOid = merchantOid.replace(/[^a-zA-Z0-9]/g, '');
+      
+      console.log('🔑 Generated merchant_oid:', finalMerchantOid);
+      const paymentAmount = Math.round(selectedPackage.price * 100); // Kuruş cinsinden
+      
+      console.log('💰 Payment amount (kuruş):', paymentAmount);
+
+      // Parametreleri temizle ve doğrula
+      const cleanUserName = userName.trim().replace(/[^\w\s]/g, '');
+      const cleanUserAddress = userAddress.trim().replace(/[^\w\s]/g, '');
+      const cleanUserPhone = userPhone.replace(/[^0-9]/g, '');
+      
+      if (paymentAmount <= 0) {
+        console.error('❌ Geçersiz ödeme tutarı:', paymentAmount);
+        return { success: false, error: 'Geçersiz ödeme tutarı' };
+      }
+      
+      console.log('🧹 Temizlenmiş veriler:', {
+        cleanUserName,
+        cleanUserPhone: cleanUserPhone.substring(0, 3) + '***',
+        paymentAmount
+      });
+
+      // PayTR için güvenli encoding - Türkçe karakterleri temizle
+      const basketItem = `${selectedPackage.name} - İlan: ${jobId}`;
+      const cleanBasketItem = basketItem.replace(/[^\w\s-]/g, ''); // Özel karakterleri temizle
+      const userBasket = JSON.stringify([[cleanBasketItem, selectedPackage.price, 1]]);
+
+      console.log('🛒 User basket:', userBasket);
+
+      // IP adresini al
+      const userIP = await this.getUserIP();
+      console.log('🌐 User IP:', userIP);
+
+      const paymentData = {
+        merchant_id: MERCHANT_ID,
+        user_ip: userIP,
+        merchant_oid: finalMerchantOid,
+        email: userEmail.trim(),
+        payment_amount: paymentAmount.toString(),
+        user_basket: btoa(unescape(encodeURIComponent(userBasket))),
+        debug_on: '0',
+        no_installment: '1',
+        max_installment: '0',
+        user_name: cleanUserName,
+        user_address: cleanUserAddress,
+        user_phone: cleanUserPhone,
+        merchant_ok_url: `${SUCCESS_URL}?merchant_oid=${finalMerchantOid}`,
+        merchant_fail_url: `${FAIL_URL}?merchant_oid=${finalMerchantOid}`,
+        timeout_limit: '30',
+        currency: 'TL',
+        test_mode: '0' // Production mode
+      };
+      
+      console.log('📋 PayTR Payment Data (gizli bilgiler hariç):', {
+        merchant_id: paymentData.merchant_id,
+        merchant_oid: paymentData.merchant_oid,
+        email: paymentData.email,
+        payment_amount: paymentData.payment_amount,
+        user_name: paymentData.user_name.substring(0, 3) + '***',
+        user_phone: paymentData.user_phone.substring(0, 3) + '***',
+        currency: paymentData.currency,
+        test_mode: paymentData.test_mode
+      });
+
+      // Son kontrol
+      if (!paymentData.email || !paymentData.user_name || !paymentData.user_phone || !paymentData.payment_amount) {
+        console.error('❌ Eksik ödeme parametreleri:', {
+          email: !!paymentData.email,
+          user_name: !!paymentData.user_name,
+          user_phone: !!paymentData.user_phone,
+          payment_amount: !!paymentData.payment_amount
+        });
+        return { success: false, error: 'Eksik ödeme parametreleri' };
+      }
+
+      const paytrToken = this.generatePaytrToken(paymentData);
+      
+      console.log('🔐 PayTR Token oluşturuldu, uzunluk:', paytrToken.length);
+
+      const formData = new FormData();
+      Object.entries(paymentData).forEach(([key, value]) => {
+        formData.append(key, value);
+      });
+      formData.append('paytr_token', paytrToken);
+
+      console.log('📤 PayTR API\'ye istek gönderiliyor...');
+
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+
+      console.log('📥 PayTR API Response Status:', response.status);
+      
       if (!response.ok) {
-        throw new Error('Ödeme başlatılamadı');
+        const errorText = await response.text();
+        console.error('❌ PayTR API HTTP Error:', response.status, errorText);
+        throw new Error(`PayTR API Error: ${response.status}`);
       }
 
       const result = await response.json();
+      console.log('📋 PayTR API Result:', result);
 
-      return {
-        paymentUrl: result.payment_url,
-        paymentId
-      };
+      if (result.status === 'success') {
+        console.log('✅ Payment token received:', result.token || result.iframe_token);
+        
+        // Ödeme bilgilerini Firebase'e kaydet
+        await this.savePendingPayment(jobId, packageId, finalMerchantOid, selectedPackage.price);
+        
+        // PayTR ödeme sayfası URL'sini oluştur
+        const paymentUrl = result.token 
+          ? `https://www.paytr.com/odeme/guvenli/${result.token}`
+          : result.iframe_token 
+          ? `https://www.paytr.com/odeme/guvenli/${result.iframe_token}`
+          : null;
+        
+        console.log('🔗 Payment URL oluşturuldu:', paymentUrl);
 
+        return {
+          success: true,
+          token: result.token,
+          iframeToken: result.iframe_token,
+          paymentUrl
+        };
+      } else {
+        console.error('❌ PayTR API Error:', result);
+        return {
+          success: false,
+          error: result.reason || 'Ödeme oluşturulamadı'
+        };
+      }
     } catch (error) {
-      console.error('Payment initiation error:', error);
-      throw new Error('Ödeme işlemi başlatılamadı');
+      console.error('❌ Payment creation error:', error);
+      return {
+        success: false,
+        error: 'Ödeme işlemi başlatılamadı'
+      };
     }
   }
 
-  // Ödeme durumunu kontrol et
-  public async checkPaymentStatus(paymentId: string): Promise<PaymentStatus | null> {
+  private async getUserIP(): Promise<string> {
     try {
-      const paymentRef = ref(db, `payments/${paymentId}`);
+      console.log('🌐 IP adresi alınıyor...');
+      const response = await fetch('https://api.ipify.org?format=json');
+      const data = await response.json();
+      console.log('✅ IP adresi alındı:', data.ip);
+      return data.ip;
+    } catch {
+      console.log('⚠️ IP alınamadı, varsayılan IP kullanılıyor');
+      return '127.0.0.1';
+    }
+  }
+
+  private async savePendingPayment(
+    jobId: string,
+    packageId: string,
+    merchantOid: string,
+    amount: number
+  ): Promise<void> {
+    // Merchant OID'nin alfanumerik olduğundan emin ol
+    const cleanMerchantOid = merchantOid.replace(/[^a-zA-Z0-9]/g, '');
+    
+    // Firebase'e pending payment kaydet
+    const { ref, set } = await import('firebase/database');
+    const { db } = await import('../lib/firebase');
+    
+    const paymentRef = ref(db, `pending_payments/${cleanMerchantOid}`);
+    await set(paymentRef, {
+      jobId,
+      packageId,
+      amount,
+      status: 'pending',
+      createdAt: Date.now(),
+      merchantOid: cleanMerchantOid
+    });
+  }
+
+  async verifyPayment(merchantOid: string): Promise<boolean> {
+    try {
+      // Merchant OID'nin alfanumerik olduğundan emin ol
+      const cleanMerchantOid = merchantOid.replace(/[^a-zA-Z0-9]/g, '');
+      
+      // Firebase'den ödeme durumunu kontrol et
+      const { ref, get } = await import('firebase/database');
+      const { db } = await import('../lib/firebase');
+      
+      const paymentRef = ref(db, `pending_payments/${cleanMerchantOid}`);
       const snapshot = await get(paymentRef);
       
-      if (snapshot.exists()) {
-        return { id: paymentId, ...snapshot.val() };
-      }
-      
-      return null;
+      return snapshot.exists() && snapshot.val().status === 'completed';
     } catch (error) {
-      console.error('Payment status check error:', error);
-      return null;
-    }
-  }
-
-  // Ödeme tamamlandığında ilanı öne çıkar
-  public async completePromotion(paymentId: string, jobId: string, promotionType: string, duration: number): Promise<boolean> {
-    try {
-      const now = Date.now();
-      const expiresAt = now + (duration * 24 * 60 * 60 * 1000);
-
-      // İlan güncelleme
-      const jobRef = ref(db, `jobs/${jobId}`);
-      const promotionData: Partial<JobListing> = {
-        isPremium: promotionType === 'premium' || promotionType === 'top',
-        isPromoted: true,
-        promotionExpiresAt: expiresAt,
-        updatedAt: now
-      };
-
-      await update(jobRef, promotionData);
-
-      // Ödeme durumunu güncelle
-      const paymentRef = ref(db, `payments/${paymentId}`);
-      await update(paymentRef, {
-        status: 'completed',
-        completedAt: now
-      });
-
-      return true;
-    } catch (error) {
-      console.error('Promotion completion error:', error);
+      console.error('Payment verification error:', error);
       return false;
-    }
-  }
-
-  // Promosyon süresini kontrol et ve süresi dolmuş olanları temizle
-  public async cleanExpiredPromotions(): Promise<void> {
-    try {
-      const jobsRef = ref(db, 'jobs');
-      const snapshot = await get(jobsRef);
-      
-      if (snapshot.exists()) {
-        const now = Date.now();
-        const updates: Record<string, Partial<JobListing>> = {};
-
-        snapshot.forEach((childSnapshot) => {
-          const job = childSnapshot.val() as JobListing;
-          const jobId = childSnapshot.key!;
-
-          if (job.promotionExpiresAt && job.promotionExpiresAt < now) {
-            updates[`jobs/${jobId}`] = {
-              isPremium: false,
-              isPromoted: false,
-              promotionExpiresAt: null,
-              updatedAt: now
-            };
-          }
-        });
-
-        if (Object.keys(updates).length > 0) {
-          await update(ref(db), updates);
-          console.log(`${Object.keys(updates).length} promosyon süresi dolmuş ilan temizlendi`);
-        }
-      }
-    } catch (error) {
-      console.error('Expired promotions cleanup error:', error);
     }
   }
 }
 
-// Singleton instance
-export const paymentService = PaymentService.getInstance();
+export const paymentService = new PaymentService();

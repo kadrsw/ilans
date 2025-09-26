@@ -28,35 +28,37 @@ export function Pagination({
   if (totalPages <= 1) return null;
 
   return (
-    <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 rounded-lg shadow-sm">
-      {/* Mobil görünüm */}
-      <div className="flex-1 flex justify-between sm:hidden">
+    <div className="bg-white px-4 py-6 sm:px-6 rounded-xl shadow-sm border border-gray-200">
+      {/* Mobile View */}
+      <div className="flex justify-between items-center sm:hidden">
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={!hasPrevPage}
           className={clsx(
-            'relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md',
+            'flex items-center px-4 py-3 border-2 text-sm font-semibold rounded-xl touch-target transition-all duration-200',
             hasPrevPage
-              ? 'text-gray-700 bg-white hover:bg-gray-50'
-              : 'text-gray-400 bg-gray-100 cursor-not-allowed'
+              ? 'text-gray-700 bg-white border-gray-300 hover:border-red-500 hover:text-red-600 hover:bg-red-50'
+              : 'text-gray-400 bg-gray-100 border-gray-200 cursor-not-allowed'
           )}
         >
           <ChevronLeft className="h-4 w-4 mr-1" />
           Önceki
         </button>
         
-        <span className="text-sm text-gray-700 flex items-center">
-          Sayfa {currentPage} / {totalPages}
-        </span>
+        <div className="flex items-center space-x-2">
+          <span className="text-sm text-gray-700 font-medium">
+            Sayfa {currentPage} / {totalPages}
+          </span>
+        </div>
         
         <button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={!hasNextPage}
           className={clsx(
-            'relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md',
+            'flex items-center px-4 py-3 border-2 text-sm font-semibold rounded-xl touch-target transition-all duration-200',
             hasNextPage
-              ? 'text-gray-700 bg-white hover:bg-gray-50'
-              : 'text-gray-400 bg-gray-100 cursor-not-allowed'
+              ? 'text-gray-700 bg-white border-gray-300 hover:border-red-500 hover:text-red-600 hover:bg-red-50'
+              : 'text-gray-400 bg-gray-100 border-gray-200 cursor-not-allowed'
           )}
         >
           Sonraki
@@ -64,51 +66,50 @@ export function Pagination({
         </button>
       </div>
 
-      {/* Desktop görünüm */}
-      <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+      {/* Desktop View */}
+      <div className="hidden sm:flex items-center justify-between">
         <div>
           <p className="text-sm text-gray-700">
-            <span className="font-medium">{startIndex}</span>
+            <span className="font-semibold text-red-600">{startIndex}</span>
             {' - '}
-            <span className="font-medium">{endIndex}</span>
+            <span className="font-semibold text-red-600">{endIndex}</span>
             {' arası, toplam '}
-            <span className="font-medium">{totalItems}</span>
-            {' ilan'}
+            <span className="font-semibold text-red-600">{totalItems}</span>
+            {' ilan gösteriliyor'}
           </p>
         </div>
         
         <div>
-          <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-            {/* Önceki butonu */}
+          <nav className="flex items-center space-x-1" aria-label="Pagination">
+            {/* Previous Button */}
             <button
               onClick={() => onPageChange(currentPage - 1)}
               disabled={!hasPrevPage}
               className={clsx(
-                'relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 text-sm font-medium',
+                'flex items-center px-3 py-2 rounded-lg border-2 text-sm font-semibold touch-target transition-all duration-200',
                 hasPrevPage
-                  ? 'text-gray-500 bg-white hover:bg-gray-50'
-                  : 'text-gray-300 bg-gray-100 cursor-not-allowed'
+                  ? 'text-gray-700 bg-white border-gray-300 hover:border-red-500 hover:text-red-600 hover:bg-red-50'
+                  : 'text-gray-400 bg-gray-100 border-gray-200 cursor-not-allowed'
               )}
             >
-              <span className="sr-only">Önceki</span>
-              <ChevronLeft className="h-5 w-5" />
+              <ChevronLeft className="h-4 w-4" />
             </button>
 
-            {/* Sayfa numaraları */}
+            {/* Page Numbers */}
             {getPageNumbers().map((page, index) => (
               <React.Fragment key={index}>
                 {page === '...' ? (
-                  <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                  <span className="px-4 py-2 text-gray-500 font-medium">
                     ...
                   </span>
                 ) : (
                   <button
                     onClick={() => onPageChange(page as number)}
                     className={clsx(
-                      'relative inline-flex items-center px-4 py-2 border text-sm font-medium',
+                      'px-4 py-2 rounded-lg border-2 text-sm font-semibold touch-target transition-all duration-200',
                       currentPage === page
-                        ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                        : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                        ? 'bg-red-600 border-red-600 text-white shadow-md'
+                        : 'bg-white border-gray-300 text-gray-700 hover:border-red-500 hover:text-red-600 hover:bg-red-50'
                     )}
                   >
                     {page}
@@ -117,19 +118,18 @@ export function Pagination({
               </React.Fragment>
             ))}
 
-            {/* Sonraki butonu */}
+            {/* Next Button */}
             <button
               onClick={() => onPageChange(currentPage + 1)}
               disabled={!hasNextPage}
               className={clsx(
-                'relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 text-sm font-medium',
+                'flex items-center px-3 py-2 rounded-lg border-2 text-sm font-semibold touch-target transition-all duration-200',
                 hasNextPage
-                  ? 'text-gray-500 bg-white hover:bg-gray-50'
-                  : 'text-gray-300 bg-gray-100 cursor-not-allowed'
+                  ? 'text-gray-700 bg-white border-gray-300 hover:border-red-500 hover:text-red-600 hover:bg-red-50'
+                  : 'text-gray-400 bg-gray-100 border-gray-200 cursor-not-allowed'
               )}
             >
-              <span className="sr-only">Sonraki</span>
-              <ChevronRight className="h-5 w-5" />
+              <ChevronRight className="h-4 w-4" />
             </button>
           </nav>
         </div>

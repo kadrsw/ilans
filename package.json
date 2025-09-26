@@ -8,17 +8,17 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "analyze": "vite build --mode analyze",
-    "update-sitemap": "node scripts/updateSitemap.js",
-    "generate:sitemap": "tsx scripts/generateSitemap.ts",
-    "postbuild": "npm run generate:sitemap"
+    "analyze": "vite build --mode analyze"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "@types/crypto-js": "^4.2.2",
     "clsx": "^2.1.0",
+    "crypto-js": "^4.2.0",
     "fast-xml-parser": "^4.3.5",
     "firebase": "^10.8.1",
     "html2canvas": "^1.4.1",
-    "jspdf": "^2.5.2",
+    "jspdf": "^2.5.1",
     "lucide-react": "^0.344.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

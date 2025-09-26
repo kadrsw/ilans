@@ -1,112 +1,124 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { CheckCircle, Star, TrendingUp, ArrowRight } from 'lucide-react';
+import { ref, get, update } from 'firebase/database';
+import { db } from '../lib/firebase';
+import { CheckCircle, Crown, ArrowRight } from 'lucide-react';
 import { Button } from '../components/ui/Button';
-import { paymentService } from '../services/paymentService';
+import { paymentPackages } from '../services/paymentService';
 
 export function PaymentSuccessPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [isProcessing, setIsProcessing] = useState(true);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const paymentId = searchParams.get('payment_id');
-  const jobId = searchParams.get('job_id');
+  const [loading, setLoading] = useState(true);
+  const [paymentData, setPaymentData] = useState<any>(null);
 
   useEffect(() => {
-    const processPayment = async () => {
-      if (!paymentId || !jobId) {
-        setError('Geçersiz ödeme bilgileri');
-        setIsProcessing(false);
+    const verifyPayment = async () => {
+      const merchantOid = searchParams.get('merchant_oid');
+      const status = searchParams.get('status');
+      
+      if (!merchantOid || status !== 'success') {
+        navigate('/odeme/iptal');
         return;
       }
 
       try {
-        // Ödeme durumunu kontrol et
-        const paymentStatus = await paymentService.checkPaymentStatus(paymentId);
+        // Pending payment'ı kontrol et
+        const paymentRef = ref(db, `pending_payments/${merchantOid}`);
+        const snapshot = await get(paymentRef);
         
-        if (paymentStatus?.status === 'completed') {
-          setSuccess(true);
-        } else {
-          setError('Ödeme henüz tamamlanmamış');
+        if (snapshot.exists()) {
+          const payment = snapshot.val();
+          setPaymentData(payment);
+          
+          // İlanı premium yap
+          const jobRef = ref(db, `jobs/${payment.jobId}`);
+          const selectedPackage = paymentPackages.find(p => p.id === payment.packageId);
+          
+          if (selectedPackage) {
+            const endDate = Date.now() + (selectedPackage.duration * 24 * 60 * 60 * 1000);
+            
+            await update(jobRef, {
+              isPremium: true,
+              premiumStartDate: Date.now(),
+              premiumEndDate: endDate,
+              premiumPackage: payment.packageId,
+              updatedAt: Date.now()
+            });
+
+            // Payment'ı completed olarak işaretle
+            await update(paymentRef, {
+              status: 'completed',
+              completedAt: Date.now()
+            });
+          }
         }
-      } catch (err) {
-        setError('Ödeme durumu kontrol edilemedi');
+      } catch (error) {
+        console.error('Payment verification error:', error);
+        navigate('/odeme/iptal');
       } finally {
-        setIsProcessing(false);
+        setLoading(false);
       }
     };
 
-    processPayment();
-  }, [paymentId, jobId]);
+    verifyPayment();
+  }, [searchParams, navigate]);
 
-  if (isProcessing) {
+  if (loading) {
     return (
-      <div className="min-h-[50vh] flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600">Ödeme durumu kontrol ediliyor...</p>
-        </div>
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600" />
       </div>
     );
   }
 
-  if (error) {
-    return (
-      <div className="min-h-[50vh] flex items-center justify-center">
-        <div className="text-center max-w-md">
-          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <X className="h-8 w-8 text-red-600" />
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Ödeme Hatası</h1>
-          <p className="text-gray-600 mb-6">{error}</p>
-          <Button onClick={() => navigate('/ilanlarim')}>
-            İlanlarıma Dön
-          </Button>
-        </div>
-      </div>
-    );
-  }
+  const selectedPackage = paymentData ? 
+    paymentPackages.find(p => p.id === paymentData.packageId) : null;
 
   return (
-    <div className="min-h-[50vh] flex items-center justify-center">
-      <div className="text-center max-w-md">
-        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+    <div className="max-w-2xl mx-auto py-8 text-center">
+      <div className="bg-white p-8 rounded-lg shadow-sm">
+        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
           <CheckCircle className="h-8 w-8 text-green-600" />
         </div>
         
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Ödeme Başarılı!</h1>
+        <h1 className="text-2xl font-bold text-gray-900 mb-4">
+          Ödeme Başarılı!
+        </h1>
+        
         <p className="text-gray-600 mb-6">
-          İlanınız başarıyla öne çıkarıldı. Artık daha fazla görüntülenecek ve daha çok başvuru alacaksınız.
+          İlanınız başarıyla öne çıkarıldı. Artık daha fazla görüntülenecek!
         </p>
 
-        <div className="bg-yellow-50 p-4 rounded-lg mb-6">
-          <div className="flex items-center justify-center gap-2 text-yellow-700 mb-2">
-            <Star className="h-5 w-5 fill-current" />
-            <span className="font-semibold">İlanınız Öne Çıkarıldı</span>
-            <TrendingUp className="h-5 w-5" />
+        {selectedPackage && (
+          <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-lg mb-6">
+            <div className="flex items-center justify-center gap-2 mb-3">
+              <Crown className="h-6 w-6 text-purple-600" />
+              <h2 className="text-lg font-semibold text-purple-900">
+                {selectedPackage.name}
+              </h2>
+            </div>
+            <p className="text-purple-700">
+              İlanınız {selectedPackage.duration} gün boyunca öne çıkacak
+            </p>
           </div>
-          <p className="text-sm text-yellow-600">
-            İlanınız artık listede öne çıkarılmış olarak görünecek
-          </p>
-        </div>
+        )}
 
-        <div className="space-y-3">
-          <Button 
-            onClick={() => navigate(`/ilan/${jobId}`)}
+        <div className="space-y-4">
+          <Button
+            onClick={() => navigate('/ilanlarim')}
             className="w-full flex items-center justify-center gap-2"
           >
-            İlanımı Görüntüle
+            İlanlarıma Git
             <ArrowRight className="h-4 w-4" />
           </Button>
           
-          <Button 
+          <Button
             variant="outline"
-            onClick={() => navigate('/ilanlarim')}
+            onClick={() => navigate('/')}
             className="w-full"
           >
-            İlanlarıma Dön
+            Ana Sayfaya Dön
           </Button>
         </div>
       </div>

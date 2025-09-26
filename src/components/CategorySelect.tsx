@@ -4,14 +4,20 @@ import { jobCategories, Category, SubCategory } from '../data/jobCategories';
 interface CategorySelectProps {
   onCategoryChange: (category: string, subCategory: string) => void;
   error?: string;
+  selectedCategory?: string;
+  selectedSubCategory?: string;
 }
 
-export function CategorySelect({ onCategoryChange, error }: CategorySelectProps) {
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [selectedSubCategory, setSelectedSubCategory] = useState<string>('');
+export function CategorySelect({ 
+  onCategoryChange, 
+  error, 
+  selectedCategory = '', 
+  selectedSubCategory = '' 
+}: CategorySelectProps) {
   const [customCategory, setCustomCategory] = useState<string>('');
   const [currentSubCategories, setCurrentSubCategories] = useState<SubCategory[]>([]);
 
+  // Kategori değiştiğinde alt kategorileri güncelle
   useEffect(() => {
     if (selectedCategory) {
       const category = jobCategories.find(c => c.id === selectedCategory);
@@ -23,14 +29,11 @@ export function CategorySelect({ onCategoryChange, error }: CategorySelectProps)
 
   const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const categoryId = e.target.value;
-    setSelectedCategory(categoryId);
-    setSelectedSubCategory('');
     onCategoryChange(categoryId, '');
   };
 
   const handleSubCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const subCategoryId = e.target.value;
-    setSelectedSubCategory(subCategoryId);
     
     if (selectedCategory === 'diger' && subCategoryId === 'custom') {
       onCategoryChange('diger', customCategory);

@@ -1,11 +1,11 @@
 {
   "rules": {
     "jobs": {
-      ".read": true,
+      ".read": "auth != null || root.child('admin_settings/public_read').val() === true",
       ".write": "auth != null",
       ".indexOn": ["createdAt", "userId", "category", "title", "company", "location"],
       "$jobId": {
-        ".read": true,
+        ".read": "auth != null || root.child('admin_settings/public_read').val() === true",
         ".write": "auth != null && ((!data.exists() || data.child('userId').val() === auth.uid) || root.child('users').child(auth.uid).child('role').val() === 'admin')",
         ".validate": "newData.hasChildren(['title', 'company', 'description', 'location', 'type', 'category', 'userId', 'createdAt'])",
         "userId": {

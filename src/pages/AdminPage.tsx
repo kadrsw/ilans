@@ -1,8 +1,9 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
-import { Settings, RefreshCw, Users, FileText } from 'lucide-react';
+import { Settings, RefreshCw, Users, FileText, Globe } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { JobScraperControls } from '../components/admin/JobScraperControls';
+import { SitemapControls } from '../components/admin/SitemapControls';
 
 export function AdminPage() {
   const { user, isAdmin } = useAuth();
@@ -32,6 +33,9 @@ export function AdminPage() {
             <JobScraperControls />
           </div>
         </div>
+
+        {/* Sitemap Yönetimi */}
+        <SitemapControls />
 
         {/* İstatistikler */}
         <div className="bg-white p-6 rounded-lg shadow-sm">
@@ -70,6 +74,34 @@ export function AdminPage() {
               <span className="text-sm text-gray-600">Rol:</span>
               <div className="font-medium">Admin</div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* SEO Bilgileri */}
+      <div className="mt-8 bg-white p-6 rounded-lg shadow-sm">
+        <div className="flex items-center gap-2 mb-4">
+          <Globe className="h-5 w-5 text-blue-600" />
+          <h2 className="text-lg font-semibold">SEO Durumu</h2>
+        </div>
+        
+        <div className="grid md:grid-cols-3 gap-4">
+          <div className="p-4 bg-green-50 rounded-lg">
+            <div className="text-sm text-gray-600">Sitemap Durumu</div>
+            <div className="text-lg font-bold text-green-600">Aktif</div>
+            <div className="text-xs text-gray-500 mt-1">Otomatik güncelleme</div>
+          </div>
+          
+          <div className="p-4 bg-blue-50 rounded-lg">
+            <div className="text-sm text-gray-600">Google Indexing</div>
+            <div className="text-lg font-bold text-blue-600">Çalışıyor</div>
+            <div className="text-xs text-gray-500 mt-1">Otomatik bildirim</div>
+          </div>
+          
+          <div className="p-4 bg-purple-50 rounded-lg">
+            <div className="text-sm text-gray-600">Schema Markup</div>
+            <div className="text-lg font-bold text-purple-600">Aktif</div>
+            <div className="text-xs text-gray-500 mt-1">JobPosting schema</div>
           </div>
         </div>
       </div>

@@ -1,11 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- Ana sitemap index - Google Search Console için optimize edilmiş -->
   <sitemap>
     <loc>https://isilanlarim.org/sitemap-static.xml</loc>
-    <lastmod>2025-06-13T20:43:08.844Z</lastmod>
+    <lastmod>2025-01-06T23:30:00.000Z</lastmod>
   </sitemap>
   <sitemap>
     <loc>https://isilanlarim.org/sitemap-jobs.xml</loc>
-    <lastmod>2025-06-13T20:43:08.844Z</lastmod>
+    <lastmod>2025-01-06T23:30:00.000Z</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>https://isilanlarim.org/sitemap-pages.xml</loc>
+    <lastmod>2025-01-06T23:30:00.000Z</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>https://isilanlarim.org/sitemap-categories.xml</loc>
+    <lastmod>2025-01-06T23:30:00.000Z</lastmod>
+  </sitemap>
+  <sitemap>
+    <loc>https://isilanlarim.org/sitemap-cities.xml</loc>
+    <lastmod>2025-01-06T23:30:00.000Z</lastmod>
   </sitemap>
 </sitemapindex>

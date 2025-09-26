@@ -1,11 +1,9 @@
 import React, { useEffect } from 'react';
-import { MapPin, Building2, Clock, Mail, Phone, MessageCircle, Briefcase, FileText, ArrowLeft, Home, ExternalLink, Calendar, DollarSign, User, CheckCircle, Star, TrendingUp } from 'lucide-react';
-import { formatDate } from '../../utils/dateUtils';
-import { JobActions } from './JobActions';
-import { JobShare } from './JobShare';
+import { MapPin, Building2, Clock, Mail, Phone, MessageCircle, Briefcase, FileText, Calendar, DollarSign, User, ChevronLeft, Share2, Heart, Bookmark } from 'lucide-react';
+import { formatDate, formatDateTime, getTimeAgo } from '../../utils/dateUtils';
 import { RelatedJobs } from './RelatedJobs';
 import { ApplyButton } from './ApplyButton';
-import { Button } from '../ui/Button';
+import { JobActions } from './JobActions';
 import { Breadcrumb } from '../ui/Breadcrumb';
 import { useNavigate } from 'react-router-dom';
 import { generateMetaTags } from '../../utils/seoUtils';
@@ -21,12 +19,27 @@ export function JobDetails({ job }: JobDetailsProps) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    window.scrollTo(0, 0);
+    window.scrollTo({ top: 0, behavior: 'instant' });
     
+    // SEO Meta Tags - Google için optimize edilmiş
     generateMetaTags({
-      title: job.title,
-      description: job.description.substring(0, 160),
-      keywords: [job.category, job.type, job.location, 'iş ilanı', 'kariyer'],
+      title: `${job.title} - ${job.company}, ${job.location} İş İlanı | İsilanlarim.org`,
+      description: `${job.title} pozisyonu için ${job.company} şirketi ${job.location}'da eleman arıyor. ${job.description.substring(0, 100)}... Hemen başvuru yapın!`,
+      keywords: [
+        job.title.toLowerCase(),
+        `${job.title.toLowerCase()} iş ilanı`,
+        `${job.location.toLowerCase()} ${job.title.toLowerCase()}`,
+        `${job.company.toLowerCase()} iş ilanları`,
+        job.category,
+        job.type.toLowerCase(),
+        job.location.toLowerCase(),
+        'iş ilanı',
+        'kariyer',
+        `${job.location.toLowerCase()} iş ilanları`,
+        `${job.category} pozisyonu`,
+        'güncel iş ilanları',
+        'iş fırsatları'
+      ],
       url: window.location.pathname,
       jobData: job
     });
@@ -34,304 +47,320 @@ export function JobDetails({ job }: JobDetailsProps) {
 
   const breadcrumbItems = [
     { label: 'İş İlanları', href: '/' },
+    { label: job.location, href: `/${job.location.toLowerCase()}-is-ilanlari` },
     { label: job.category, href: `/is-ilanlari/${job.category}` },
     { label: job.title }
   ];
 
-  const isPremiumJob = job.isPremium || job.isPromoted;
+  const formatPhoneNumber = (phone: string) => {
+    if (!phone) return '';
+    const cleaned = phone.replace(/[^0-9]/g, '');
+    return cleaned.startsWith('0') ? cleaned : `0${cleaned}`;
+  };
+
+  const getWhatsAppLink = (phone: string) => {
+    if (!phone) return '';
+    const cleaned = phone.replace(/[^0-9]/g, '');
+    return `https://wa.me/90${cleaned.startsWith('0') ? cleaned.substring(1) : cleaned}`;
+  };
 
   return (
-    <div className="max-w-4xl mx-auto py-6">
-      {/* Breadcrumb */}
-      <Breadcrumb items={breadcrumbItems} />
+    <div className="min-h-screen bg-gray-50">
+      {/* Mobile Header */}
+      <div className="sticky top-0 z-50 bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 lg:hidden">
+        <button
+          onClick={() => navigate(-1)}
+          className="p-2 -ml-2 rounded-lg hover:bg-gray-100 transition-colors touch-target"
+          aria-label="Geri dön"
+        >
+          <ChevronLeft className="h-5 w-5 text-gray-600" />
+        </button>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-sm font-semibold text-gray-900 line-clamp-1">
+            {job.title}
+          </h1>
+          <p className="text-xs text-gray-500 line-clamp-1">
+            {job.company} • {job.location}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors touch-target">
+            <Heart className="h-5 w-5" />
+          </button>
+          <button className="p-2 text-gray-400 hover:text-blue-600 rounded-lg hover:bg-blue-50 transition-colors touch-target">
+            <Share2 className="h-5 w-5" />
+          </button>
+        </div>
+      </div>
 
-      <article className="bg-white rounded-2xl shadow-soft overflow-hidden mt-6" itemScope itemType="https://schema.org/JobPosting">
-        {/* Premium Badge */}
-        {isPremiumJob && (
-          <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-4 py-2 text-center font-medium">
-            <div className="flex items-center justify-center gap-2">
-              <Star className="h-4 w-4 fill-current" />
-              <span>Öne Çıkarılmış İlan</span>
-              <TrendingUp className="h-4 w-4" />
-            </div>
-          </div>
-        )}
+      {/* Desktop Breadcrumb */}
+      <div className="hidden lg:block max-w-6xl mx-auto px-4 py-6">
+        <Breadcrumb items={breadcrumbItems} />
+      </div>
 
-        {/* Main Content - İlan Başlığı ve Açıklaması Öne Çıkarıldı */}
-        <div className="p-6 sm:p-8">
-          {/* Header Section - Sadece Başlık ve Şirket */}
-          <div className="mb-8">
-            <div className="flex items-start justify-between gap-4 mb-4">
+      <div className="max-w-6xl mx-auto">
+        <article className="bg-white lg:rounded-2xl lg:shadow-lg overflow-hidden lg:mt-6" itemScope itemType="https://schema.org/JobPosting">
+          
+          {/* Desktop Header */}
+          <div className="hidden lg:block bg-gradient-to-r from-red-50 to-blue-50 p-8">
+            <div className="flex items-start justify-between gap-6 mb-6">
               <div className="flex-1 min-w-0">
-                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-3 leading-tight" itemProp="title">
+                {/* Company Logo */}
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-16 h-16 bg-gradient-to-br from-red-100 to-blue-100 rounded-2xl flex items-center justify-center shadow-lg">
+                    <Building2 className="h-8 w-8 text-red-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl text-gray-800 font-bold mb-1" itemProp="hiringOrganization">
+                      {job.company}
+                    </h2>
+                    <p className="text-gray-600 flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
+                      {job.location} • {job.type}
+                    </p>
+                  </div>
+                </div>
+                
+                <h1 className="text-3xl font-bold text-gray-900 mb-4 leading-tight" itemProp="title">
                   {job.title}
                 </h1>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 bg-blue-50 rounded-lg">
-                    <Building2 className="h-6 w-6 text-blue-600" />
-                  </div>
-                  <h2 className="text-xl sm:text-2xl text-gray-800 font-semibold" itemProp="hiringOrganization">
-                    {job.company}
-                  </h2>
-                </div>
               </div>
-
-              {/* Mobile Back Button */}
-              <button
-                onClick={() => navigate(-1)}
-                className="sm:hidden p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
-                aria-label="Geri dön"
-              >
-                <ArrowLeft className="h-5 w-5 text-gray-600" />
-              </button>
-            </div>
-          </div>
-
-          {/* Job Description - Ana İçerik */}
-          <section className="mb-8">
-            <h3 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-6 flex items-center gap-2">
-              <FileText className="h-6 w-6 text-blue-600" />
-              İş Tanımı ve Detayları
-            </h3>
-            <div className="prose max-w-none text-gray-700 leading-relaxed text-base sm:text-lg" itemProp="description">
-              {job.description.split('\n').map((paragraph, index) => (
-                <p key={index} className="mb-4 leading-relaxed">
-                  {paragraph}
-                </p>
-              ))}
-            </div>
-          </section>
-
-          {/* Contact Information - Başvuru Bölümü */}
-          <section className="mb-8">
-            <h3 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-6 flex items-center gap-2">
-              <User className="h-6 w-6 text-blue-600" />
-              Başvuru ve İletişim
-            </h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {job.contactEmail && (
-                <div className="card bg-blue-50 border-blue-200">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="p-3 bg-blue-500 rounded-lg">
-                      <Mail className="h-6 w-6 text-white" />
-                    </div>
-                    <h4 className="font-semibold text-blue-900 text-lg">E-posta ile Başvuru</h4>
-                  </div>
-                  <a 
-                    href={`mailto:${job.contactEmail}?subject=${encodeURIComponent(`${job.title} - İş Başvurusu`)}&body=${encodeURIComponent(`Merhaba,\n\n${job.title} pozisyonu için başvuru yapmak istiyorum.\n\nSaygılarımla,`)}`}
-                    className="text-blue-700 hover:text-blue-800 font-medium text-lg break-all block mb-3"
-                  >
-                    {job.contactEmail}
-                  </a>
-                  <Button
-                    onClick={() => window.location.href = `mailto:${job.contactEmail}?subject=${encodeURIComponent(`${job.title} - İş Başvurusu`)}`}
-                    className="w-full bg-blue-600 hover:bg-blue-700"
-                  >
-                    <Mail className="h-5 w-5 mr-2" />
-                    E-posta ile Başvur
-                  </Button>
-                </div>
-              )}
               
-              {job.contactPhone && (
-                <div className="card bg-green-50 border-green-200">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="p-3 bg-green-500 rounded-lg">
-                      <Phone className="h-6 w-6 text-white" />
-                    </div>
-                    <h4 className="font-semibold text-green-900 text-lg">Telefon İletişimi</h4>
-                  </div>
-                  <a 
-                    href={`tel:${job.contactPhone}`}
-                    className="text-green-700 hover:text-green-800 font-medium text-lg block mb-3"
-                  >
-                    {job.contactPhone}
-                  </a>
-                  <div className="space-y-2">
-                    <Button
-                      onClick={() => window.location.href = `tel:${job.contactPhone}`}
-                      className="w-full bg-green-600 hover:bg-green-700"
-                    >
-                      <Phone className="h-5 w-5 mr-2" />
-                      Hemen Ara
-                    </Button>
-                    <Button
-                      onClick={() => window.open(`https://wa.me/90${job.contactPhone.replace(/[^0-9]/g, '').startsWith('0') ? job.contactPhone.replace(/[^0-9]/g, '').substring(1) : job.contactPhone.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Merhaba, ${job.title} pozisyonu hakkında bilgi almak istiyorum.`)}`, '_blank')}
-                      className="w-full bg-green-500 hover:bg-green-600"
-                    >
-                      <MessageCircle className="h-5 w-5 mr-2" />
-                      WhatsApp ile Mesaj
-                    </Button>
-                  </div>
-                </div>
-              )}
+              <div className="flex flex-col gap-3">
+                <JobActions jobId={job.id} jobTitle={job.title} />
+              </div>
+            </div>
 
-              {job.businessPhone && (
-                <div className="card bg-gray-50 border-gray-200">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="p-3 bg-gray-500 rounded-lg">
-                      <Briefcase className="h-6 w-6 text-white" />
-                    </div>
-                    <h4 className="font-semibold text-gray-900 text-lg">İş Telefonu</h4>
-                  </div>
-                  <a 
-                    href={`tel:${job.businessPhone}`}
-                    className="text-gray-700 hover:text-gray-800 font-medium text-lg block mb-3"
-                  >
-                    {job.businessPhone}
-                  </a>
-                  <Button
-                    onClick={() => window.location.href = `tel:${job.businessPhone}`}
-                    className="w-full bg-gray-600 hover:bg-gray-700"
-                  >
-                    <Phone className="h-5 w-5 mr-2" />
-                    İş Saatleri İçinde Ara
-                  </Button>
-                </div>
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-semibold">
+                {job.category}
+              </span>
+              {job.subCategory && job.subCategory !== 'custom' && (
+                <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
+                  {job.subCategory}
+                </span>
               )}
             </div>
-          </section>
-
-          {/* Sponsored Content */}
-          <div className="mb-8">
-            <div className="card bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200">
-              <a
-                href="https://play.google.com/store/apps/details?id=app.evimcep.android"
-                target="_blank"
-                rel="noopener noreferrer sponsored"
-                className="flex items-center gap-4 hover:opacity-90 transition-opacity"
-              >
-                <div className="p-3 bg-blue-500 rounded-xl">
-                  <Home className="h-6 w-6 text-white" />
-                </div>
-                <div className="flex-1">
-                  <div className="font-semibold text-blue-900 mb-1">EvimCep</div>
-                  <div className="text-sm text-blue-700">Hızlı Emlak ve Konut Arama - Ücretsiz İndir</div>
-                  <div className="text-xs text-blue-600 mt-1">Sponsorlu İçerik</div>
-                </div>
-                <ExternalLink className="h-5 w-5 text-blue-600" />
-              </a>
-            </div>
           </div>
 
-          {/* Application Tips */}
-          <section className="mb-8">
-            <div className="card bg-yellow-50 border-yellow-200">
-              <h3 className="text-lg font-semibold text-yellow-900 mb-4 flex items-center gap-2">
-                <CheckCircle className="h-5 w-5" />
-                Başvuru İpuçları
-              </h3>
-              <ul className="space-y-2 text-yellow-800">
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="h-4 w-4 mt-0.5 text-yellow-600" />
-                  <span>CV'nizin güncel ve detaylı olduğundan emin olun</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="h-4 w-4 mt-0.5 text-yellow-600" />
-                  <span>İş tanımını dikkatlice okuyun ve uygun olduğunuzdan emin olun</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="h-4 w-4 mt-0.5 text-yellow-600" />
-                  <span>Başvuru yaparken kısa ve öz bir ön yazı ekleyin</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle className="h-4 w-4 mt-0.5 text-yellow-600" />
-                  <span>İletişim bilgilerinizin doğru olduğunu kontrol edin</span>
-                </li>
-              </ul>
-            </div>
-          </section>
-        </div>
-
-        {/* Meta Information - Sayfa Altında */}
-        <div className="bg-gray-50 border-t p-6 sm:p-8">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">İlan Detayları</h3>
-          
-          {/* Job Meta Info Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-            <div className="flex items-center gap-3 bg-white rounded-lg p-4 shadow-sm">
-              <MapPin className="h-5 w-5 text-blue-600" />
-              <div>
-                <div className="text-xs text-gray-600">Lokasyon</div>
-                <div className="font-medium text-gray-900 text-sm" itemProp="jobLocation">{job.location}</div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 bg-white rounded-lg p-4 shadow-sm">
-              <Briefcase className="h-5 w-5 text-blue-600" />
-              <div>
-                <div className="text-xs text-gray-600">Çalışma Şekli</div>
-                <div className="font-medium text-gray-900 text-sm" itemProp="employmentType">{job.type}</div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 bg-white rounded-lg p-4 shadow-sm">
-              <Calendar className="h-5 w-5 text-blue-600" />
-              <div>
-                <div className="text-xs text-gray-600">Yayın Tarihi</div>
-                <div className="font-medium text-gray-900 text-sm">
-                  <time itemProp="datePosted">{formatDate(job.createdAt)}</time>
-                </div>
-              </div>
-            </div>
-
-            {job.salary && (
-              <div className="flex items-center gap-3 bg-white rounded-lg p-4 shadow-sm">
-                <DollarSign className="h-5 w-5 text-green-600" />
-                <div>
-                  <div className="text-xs text-gray-600">Maaş</div>
-                  <div className="font-medium text-green-700 text-sm" itemProp="baseSalary">{job.salary}</div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Actions */}
-          <div className="mb-6">
-            <h4 className="text-sm font-medium text-gray-700 mb-3">İlan İşlemleri</h4>
-            <JobActions jobId={job.id} jobTitle={job.title} />
-          </div>
-
-          {/* Social Share */}
-          <div>
-            <h4 className="text-sm font-medium text-gray-700 mb-3">İlanı Paylaş</h4>
-            <JobShare jobTitle={job.title} jobUrl={window.location.href} />
-          </div>
-        </div>
-
-        {/* Related Jobs */}
-        <RelatedJobs currentJob={job} jobs={jobs} />
-
-        {/* CV Creation Section */}
-        <div className="border-t bg-blue-50 p-6 sm:p-8">
-          <div className="card bg-white border-blue-200">
+          {/* Mobile Header */}
+          <div className="lg:hidden p-4 border-b border-gray-100">
             <div className="flex items-center gap-3 mb-4">
-              <div className="p-3 bg-blue-500 rounded-lg">
-                <FileText className="h-6 w-6 text-white" />
+              <div className="w-12 h-12 bg-gradient-to-br from-red-100 to-blue-100 rounded-xl flex items-center justify-center">
+                <Building2 className="h-6 w-6 text-red-600" />
               </div>
-              <h3 className="font-semibold text-blue-900 text-lg">Profesyonel CV Oluşturun</h3>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-lg text-gray-700 font-bold" itemProp="hiringOrganization">
+                  {job.company}
+                </h2>
+                <p className="text-sm text-gray-500 flex items-center gap-1">
+                  <MapPin className="h-3 w-3" />
+                  {job.location}
+                </p>
+              </div>
             </div>
-            <p className="text-blue-700 mb-4">
-              Ücretsiz CV oluşturma aracımızı kullanarak profesyonel bir özgeçmiş hazırlayın
-              ve iş başvurularınızda kullanın.
-            </p>
-            <Button
-              onClick={() => navigate('/cv-olustur')}
-              className="btn-primary w-full sm:w-auto"
-            >
-              <FileText className="h-5 w-5 mr-2" />
-              CV Oluşturmaya Başla
-            </Button>
+            
+            <h1 className="text-xl font-bold text-gray-900 mb-2 leading-tight" itemProp="title">
+              {job.title}
+            </h1>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold">
+                {job.category}
+              </span>
+              <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">
+                {job.type}
+              </span>
+            </div>
           </div>
-        </div>
 
-        {/* Fixed Apply Button */}
-        <ApplyButton 
-          email={job.contactEmail} 
-          phone={job.contactPhone || job.businessPhone} 
-        />
-      </article>
+          <div className="p-4 lg:p-8 space-y-8">
+            {/* Job Meta Info */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl">
+                <MapPin className="h-5 w-5 text-red-600" />
+                <div>
+                  <div className="text-xs text-gray-500">Lokasyon</div>
+                  <div className="font-semibold text-gray-900" itemProp="jobLocation">{job.location}</div>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl">
+                <Clock className="h-5 w-5 text-blue-600" />
+                <div>
+                  <div className="text-xs text-gray-500">Çalışma Şekli</div>
+                  <div className="font-semibold text-gray-900" itemProp="employmentType">{job.type}</div>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl">
+                <Calendar className="h-5 w-5 text-green-600" />
+                <div>
+                  <div className="text-xs text-gray-500">Yayın Tarihi</div>
+                  <div className="font-semibold text-gray-900" title={formatDateTime(job.createdAt)}>
+                    {formatDate(job.createdAt)}
+                  </div>
+                </div>
+              </div>
+              
+              {job.salary && (
+                <div className="flex items-center gap-3 p-4 bg-green-50 rounded-xl">
+                  <DollarSign className="h-5 w-5 text-green-600" />
+                  <div>
+                    <div className="text-xs text-gray-500">Maaş</div>
+                    <div className="font-semibold text-green-700">{job.salary}</div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Job Description */}
+            <section>
+              <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                <FileText className="h-6 w-6 text-red-600" />
+                İş Tanımı ve Detayları
+              </h3>
+              <div className="prose max-w-none text-gray-700 leading-relaxed" itemProp="description">
+                {job.description.split('\n').map((paragraph, index) => (
+                  <p key={index} className="mb-4 text-base leading-relaxed">
+                    {paragraph}
+                  </p>
+                ))}
+              </div>
+            </section>
+
+            {/* SEO Content for City */}
+            <section className="bg-gradient-to-r from-gray-50 to-blue-50 p-6 rounded-xl border border-gray-200">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">
+                {job.location}'da {job.title} İş İlanları ve Kariyer Fırsatları
+              </h3>
+              <p className="text-sm text-gray-700 leading-relaxed mb-4">
+                <strong>{job.location} {job.title} iş ilanları</strong> arasında öne çıkan bu pozisyon, 
+                <strong>{job.company}</strong> şirketi tarafından <strong>{job.category}</strong> sektöründe 
+                sunulmaktadır. <strong>{job.type}</strong> çalışma şekli ile kariyer fırsatı.
+              </p>
+              <p className="text-sm text-gray-700 leading-relaxed">
+                <strong>{job.location}'da {job.category} iş ilanları</strong> arayanlar için ideal fırsat. 
+                {job.salary && `<strong>Maaş aralığı: ${job.salary}</strong>. `}
+                <strong>{job.location} iş fırsatları</strong> ve <strong>{job.location} kariyer imkanları</strong> 
+                hakkında detaylı bilgi için iletişime geçin. <strong>Güncel {job.location} iş ilanları</strong> 
+                platformumuzda sürekli güncellenmektedir.
+              </p>
+            </section>
+
+            {/* Contact Information */}
+            <section>
+              <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                <User className="h-6 w-6 text-red-600" />
+                İletişim Bilgileri
+              </h3>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {job.contactEmail && (
+                  <div className="bg-blue-50 p-6 rounded-xl border border-blue-200">
+                    <div className="flex items-center mb-3">
+                      <Mail className="h-5 w-5 text-blue-600 mr-2" />
+                      <h4 className="font-semibold text-blue-900">E-posta ile İletişim</h4>
+                    </div>
+                    <a 
+                      href={`mailto:${job.contactEmail}`}
+                      className="text-blue-700 hover:text-blue-800 font-semibold break-all"
+                    >
+                      {job.contactEmail}
+                    </a>
+                  </div>
+                )}
+                
+                {job.contactPhone && (
+                  <div className="bg-green-50 p-6 rounded-xl border border-green-200">
+                    <div className="flex items-center mb-3">
+                      <Phone className="h-5 w-5 text-green-600 mr-2" />
+                      <h4 className="font-semibold text-green-900">Telefon İletişimi</h4>
+                    </div>
+                    <div className="space-y-3">
+                      <a 
+                        href={`tel:${formatPhoneNumber(job.contactPhone)}`}
+                        className="block text-green-700 hover:text-green-800 font-semibold"
+                      >
+                        {formatPhoneNumber(job.contactPhone)}
+                      </a>
+                      <a 
+                        href={getWhatsAppLink(job.contactPhone)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm font-semibold"
+                      >
+                        <MessageCircle className="h-4 w-4" />
+                        WhatsApp ile Mesaj
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+                {job.businessPhone && (
+                  <div className="bg-gray-50 p-6 rounded-xl border border-gray-200">
+                    <div className="flex items-center mb-3">
+                      <Briefcase className="h-5 w-5 text-gray-600 mr-2" />
+                      <h4 className="font-semibold text-gray-900">İş Telefonu</h4>
+                    </div>
+                    <a 
+                      href={`tel:${formatPhoneNumber(job.businessPhone)}`}
+                      className="text-gray-700 hover:text-gray-800 font-semibold"
+                    >
+                      {formatPhoneNumber(job.businessPhone)}
+                    </a>
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* Additional Job Info */}
+            <section className="bg-white border border-gray-200 rounded-xl p-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4">İlan Detayları</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-gray-500">Kategori:</span>
+                  <span className="ml-2 font-semibold text-gray-900">{job.category}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Alt Kategori:</span>
+                  <span className="ml-2 font-semibold text-gray-900">{job.subCategory}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Yayın Tarihi:</span>
+                  <span className="ml-2 font-semibold text-gray-900">{formatDate(job.createdAt)} ({getTimeAgo(job.createdAt)})</span>
+                </div>
+                {job.salary && (
+                  <div>
+                    <span className="text-gray-500">Maaş:</span>
+                    <span className="ml-2 font-semibold text-green-700">{job.salary}</span>
+                  </div>
+                )}
+                {job.educationLevel && (
+                  <div>
+                    <span className="text-gray-500">Eğitim Seviyesi:</span>
+                    <span className="ml-2 font-semibold text-gray-900">{job.educationLevel}</span>
+                  </div>
+                )}
+                {job.experience && (
+                  <div>
+                    <span className="text-gray-500">Deneyim:</span>
+                    <span className="ml-2 font-semibold text-gray-900">{job.experience}</span>
+                  </div>
+                )}
+              </div>
+            </section>
+          </div>
+
+          {/* Related Jobs */}
+          <RelatedJobs currentJob={job} jobs={jobs} />
+
+          {/* Fixed Apply Button */}
+          <ApplyButton 
+            email={job.contactEmail} 
+            phone={job.contactPhone || job.businessPhone} 
+          />
+        </article>
+      </div>
     </div>
   );
 }

@@ -4,9 +4,10 @@ import {
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
   onAuthStateChanged,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  deleteUser
 } from 'firebase/auth';
-import { ref, set, get } from 'firebase/database';
+import { ref, set, get, remove } from 'firebase/database';
 import { auth, db } from '../lib/firebase';
 import type { User } from '../types';
 
@@ -82,6 +83,42 @@ export function useAuth() {
     await sendPasswordResetEmail(auth, email);
   };
 
+  const deleteAccount = async () => {
+    if (!user || !auth.currentUser) {
+      throw new Error('Kullanıcı bulunamadı');
+    }
+
+    try {
+      // Kullanıcının tüm ilanlarını sil
+      const userJobsRef = ref(db, 'jobs');
+      const snapshot = await get(userJobsRef);
+      
+      if (snapshot.exists()) {
+        const jobs = snapshot.val();
+        const deletePromises = [];
+        
+        Object.entries(jobs).forEach(([jobId, job]: [string, any]) => {
+          if (job.userId === user.id) {
+            deletePromises.push(remove(ref(db, `jobs/${jobId}`)));
+          }
+        });
+        
+        await Promise.all(deletePromises);
+      }
+
+      // Kullanıcı verilerini sil
+      await remove(ref(db, `users/${user.id}`));
+      await remove(ref(db, `favorites/${user.id}`));
+      
+      // Firebase Auth'dan kullanıcıyı sil
+      await deleteUser(auth.currentUser);
+      
+      setUser(null);
+    } catch (error) {
+      console.error('Account deletion error:', error);
+      throw error;
+    }
+  };
   return {
     user,
     loading,
@@ -89,6 +126,7 @@ export function useAuth() {
     signIn,
     signOut,
     resetPassword,
+    deleteAccount,
     isAdmin: user?.role === 'admin'
   };
 }

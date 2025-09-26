@@ -15,10 +15,17 @@ export function CreateJobPage() {
   const handleSubmit = async (data: JobFormData) => {
     const success = await createJob(data);
     if (success) {
-      // Wait for toast to be visible before redirecting
+      // ✅ İlan başarıyla oluşturulduktan sonra ana sayfaya yönlendir
+      // Kullanıcı kendi ilanını en üstte görebilsin
       setTimeout(() => {
-        navigate('/', { replace: true });
-      }, 2000);
+        navigate('/', { 
+          replace: true,
+          state: { 
+            newJobCreated: true,
+            scrollToTop: true 
+          }
+        });
+      }, 2000); // Toast mesajının görünmesi için 2 saniye bekle
     }
   };
 
@@ -27,12 +34,14 @@ export function CreateJobPage() {
       <Toaster
         position="top-center"
         toastOptions={{
-          duration: 2000,
+          duration: 3000,
           style: {
             background: '#10B981',
             color: '#FFFFFF',
             padding: '16px',
             borderRadius: '8px',
+            fontSize: '16px',
+            fontWeight: '500'
           },
         }}
       />

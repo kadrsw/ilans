@@ -5,33 +5,44 @@
 [build.environment]
   NODE_VERSION = "18"
 
-[[plugins]]
-  package = "@netlify/plugin-sitemap"
-
-[plugins.inputs]
-  buildDir = "dist"
-  prettyURLs = true
-  trailingSlash = false
-  changeFreq = "daily"
-  priority = 0.8
-  exclude = [
-    '**/404*',
-    '**/giris*',
-    '**/kayit*',
-    '**/hesap-ayarlari*',
-    '**/ilanlarim*',
-    '**/admin*'
-  ]
-
 # Sitemap yönlendirmeleri
 [[redirects]]
   from = "/sitemap-jobs.xml"
   to = "/.netlify/functions/sitemap-jobs"
   status = 200
 
+# SEO friendly redirects
+[[redirects]]
+  from = "/jobs/*"
+  to = "/is-ilanlari/:splat"
+  status = 301
+
+[[redirects]]
+  from = "/job/*"
+  to = "/ilan/:splat"
+  status = 301
+
+[[redirects]]
+  from = "/career/*"
+  to = "/kariyer/:splat"
+  status = 301
+
+# PayTR Callback URL
+[[redirects]]
+  from = "/api/paytr-callback"
+  to = "/.netlify/functions/paytr-callback"
+  status = 200
+  force = true
+
 [[redirects]]
   from = "/sitemap.xml"
   to = "/sitemap.xml"
+  status = 200
+
+# Robots.txt
+[[redirects]]
+  from = "/robots.txt"
+  to = "/robots.txt"
   status = 200
 
 # Ana SPA yönlendirmesi (en sonda olmalı)
@@ -46,7 +57,8 @@
   [headers.values]
     Content-Type = "application/xml; charset=utf-8"
     Cache-Control = "public, max-age=3600"
-    X-Robots-Tag = "noindex"
+    X-Robots-Tag = "index, follow"
+    Link = "</sitemap.xml>; rel=sitemap; type=application/xml"
     Access-Control-Allow-Origin = "*"
 
 # Headers for better SEO and performance
@@ -58,6 +70,10 @@
     Referrer-Policy = "strict-origin-when-cross-origin"
     X-XSS-Protection = "1; mode=block"
     Strict-Transport-Security = "max-age=31536000; includeSubDomains"
+    X-Robots-Tag = "index, follow, max-snippet:-1, max-image-preview:large"
+    X-UA-Compatible = "IE=edge"
+    X-DNS-Prefetch-Control = "on"
+    Link = "</sitemap.xml>; rel=sitemap; type=application/xml"
 
 # Cache static assets
 [[headers]]

@@ -5,6 +5,7 @@ import { useAuthContext } from '../contexts/AuthContext';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { DeleteAccountModal } from '../components/DeleteAccountModal';
+import { formatDateTime } from '../utils/dateUtils';
 
 interface AccountFormData {
   phone?: string;
@@ -19,13 +20,8 @@ export function AccountSettingsPage() {
     return null;
   }
 
-  const createdAt = new Date(user.createdAt).toLocaleDateString('tr-TR', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+  // Kullanıcı oluşturma tarihini formatla
+  const createdAt = formatDateTime(user.createdAt);
 
   return (
     <div className="max-w-2xl mx-auto py-8">

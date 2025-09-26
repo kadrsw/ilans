@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { X, MapPin, Building2, Clock, Mail, Phone, MessageCircle, Briefcase, ArrowLeft } from 'lucide-react';
-import { formatDate } from '../../utils/dateUtils';
+import { formatDate, formatDateTime } from '../../utils/dateUtils';
 import { JobActions } from './JobActions';
 import type { JobListing } from '../../types';
 
@@ -65,8 +65,8 @@ export function JobDetailsModal({ job, onClose }: JobDetailsModalProps) {
               <div className="space-y-6">
                 {/* Header */}
                 <div>
-                  <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">{job.title}</h1>
-                  <h2 className="text-xl text-gray-700 mb-4">{job.company}</h2>
+                  <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3">{job.title}</h2>
+                  <h3 className="text-xl text-gray-700 mb-4">{job.company}</h3>
 
                   <div className="flex flex-col gap-3">
                     <div className="flex items-center text-gray-600">
@@ -79,7 +79,9 @@ export function JobDetailsModal({ job, onClose }: JobDetailsModalProps) {
                     </div>
                     <div className="flex items-center text-gray-600">
                       <Clock className="h-5 w-5 mr-2 text-gray-400" />
-                      {formatDate(job.createdAt)}
+                      <span title={formatDateTime(job.createdAt)}>
+                        {formatDate(job.createdAt)}
+                      </span>
                     </div>
                   </div>
 
