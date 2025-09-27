@@ -3,13 +3,22 @@ import { jobCategories } from '../../data/jobCategories';
 
 interface CategorySearchProps {
   onCategorySelect: (categoryId: string) => void;
-  availableCategories?: Set<string>;
+  availableCategories?: Set<string> | string[];
 }
 
 export function CategorySearch({ onCategorySelect, availableCategories }: CategorySearchProps) {
+  // availableCategories'i Set'e dönüştür (eğer array ise)
+  const availableCategoriesSet = React.useMemo(() => {
+    if (!availableCategories) return null;
+    if (Array.isArray(availableCategories)) {
+      return new Set(availableCategories);
+    }
+    return availableCategories;
+  }, [availableCategories]);
+
   // Filter categories that have active listings
   const activeCategories = jobCategories.filter(category => 
-    !availableCategories || availableCategories.has(category.id)
+    !availableCategoriesSet || availableCategoriesSet.has(category.id)
   );
 
   // Popüler arama terimleri
@@ -23,6 +32,7 @@ export function CategorySearch({ onCategorySelect, availableCategories }: Catego
     { id: 'sanayi', name: '📦 Evde Paketleme İşleri' },
     { id: 'enerji', name: '⚡ Akkuyu Nükleer Santral' }
   ];
+  
   return (
     <div className="flex flex-wrap gap-2">
       {/* Popüler arama terimleri */}
