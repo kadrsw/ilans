@@ -112,7 +112,8 @@ export function JobDetailsPage() {
         
         if (directSnapshot.exists()) {
           const jobData = directSnapshot.val();
-          if (jobData.status === 'active') {
+          // Status kontrolünü esnetleyelim - farklı status değerlerini kabul et
+          if (jobData.status === 'active' || jobData.status === 'approved' || jobData.status === 'published' || !jobData.status) {
             return { id: jobId, ...jobData } as JobListing;
           }
         }
@@ -129,9 +130,12 @@ export function JobDetailsPage() {
         // Sadece aktif ilanları kontrol et
         for (const [jobId, jobData] of Object.entries(allJobs)) {
           const job = jobData as any;
-          if (job.status === 'active') {
+          // Status kontrolünü esnetleyelim - farklı status değerlerini kabul et
+          if (job.status === 'active' || job.status === 'approved' || job.status === 'published' || !job.status) {
             const jobSlug = generateSlug(job.title);
+            console.log('🔍 Comparing slugs:', { jobSlug, requestedSlug: slug });
             if (jobSlug === slug) {
+              console.log('✅ Found matching job:', job.title);
               return { id: jobId, ...job } as JobListing;
             }
           }
@@ -168,7 +172,7 @@ export function JobDetailsPage() {
         'iş fırsatları',
         'eleman ilanları',
         `${job.location.toLowerCase()} eleman ilanları`,
-        `${job.category} iş ilanları ${job.location.toLowerCase()}`
+        `${job.category} iş ilanları ${job.location.toLowerCase()}`, // ✅ VİRGÜL EKLENDİ
         `${job.location.toLowerCase()} iş ara`,
         `${job.category} iş ilanları`
       ],
