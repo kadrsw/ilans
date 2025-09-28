@@ -5,12 +5,6 @@
 [build.environment]
   NODE_VERSION = "18"
 
-# Sitemap yönlendirmeleri
-[[redirects]]
-  from = "/sitemap-jobs.xml"
-  to = "/.netlify/functions/sitemap-jobs"
-  status = 200
-
 # SEO friendly redirects
 [[redirects]]
   from = "/jobs/*"
