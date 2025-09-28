@@ -1,6 +1,4 @@
-// netlify/functions/sitemap-jobs.js
-const { initializeApp, getApps } = require('firebase/app');
-const { getDatabase, ref, get, query, orderByChild, equalTo } = require('firebase/database');
+// src/services/sitemapService.ts - Güncellenmiş
 
 const firebaseConfig = {
   apiKey: "AIzaSyAUmnb0K1M6-U8uzSsYVpTxAAdXdU8I--o",
@@ -42,9 +40,8 @@ function createSlug(title) {
 
 exports.handler = async (event, context) => {
   try {
-    console.log('🔥 Sitemap function başlatıldı...');
+    console.log('🗺️ Sitemap function başlatıldı...');
     
-    // Tüm jobs'ları al ve client-side'da filtrele (index sorunu için)
     const jobsRef = ref(database, 'jobs');
     console.log('📊 Firebase\'den veri çekiliyor...');
     
@@ -61,9 +58,8 @@ exports.handler = async (event, context) => {
         },
         body: `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <!-- Generated on ${new Date().toISOString()} -->
-  <!-- Total active jobs: 0 -->
-  <!-- No jobs found in database -->
+<!-- Generated on ${new Date().toISOString()} -->
+<!-- Total active jobs: 0 -->
 </urlset>`
       };
     }
@@ -71,8 +67,15 @@ exports.handler = async (event, context) => {
     const jobs = snapshot.val();
     console.log(`📋 Toplam ilan sayısı: ${Object.keys(jobs).length}`);
     
-    // Aktif ilanları filtrele
-    const activeJobs = Object.entries(jobs).filter(([_, job]) => job && job.status === 'active');
+    // Aktif ilanları filtrele ve sırala
+    const activeJobs = Object.entries(jobs)
+      .filter(([_, job]) => job && job.status === 'active' && job.title && job.title.trim())
+      .sort(([,a], [,b]) => {
+        const timeA = a.updatedAt || a.createdAt || 0;
+        const timeB = b.updatedAt || b.createdAt || 0;
+        return timeB - timeA; // Yeni ilanlar önce
+      });
+    
     console.log(`✅ Aktif ilan sayısı: ${activeJobs.length}`);
 
     if (activeJobs.length === 0) {
@@ -85,35 +88,34 @@ exports.handler = async (event, context) => {
         },
         body: `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <!-- Generated on ${new Date().toISOString()} -->
-  <!-- Total jobs: ${Object.keys(jobs).length} -->
-  <!-- Active jobs: 0 -->
+<!-- Generated on ${new Date().toISOString()} -->
+<!-- Total jobs: ${Object.keys(jobs).length} -->
+<!-- Active jobs: 0 -->
 </urlset>`
       };
     }
 
-    // XML sitemap oluştur
+    // XML sitemap oluştur - TEMİZ FORMAT
     let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <!-- Generated on ${new Date().toISOString()} -->
-  <!-- Total active jobs: ${activeJobs.length} -->
-  
-  <!-- İş İlanları -->`;
+<!-- Generated on ${new Date().toISOString()} -->
+<!-- Total active jobs: ${activeJobs.length} -->`;
 
-    // Her aktif ilan için URL ekle
+    // Her aktif ilan için URL ekle - SLUG KULLAN
     activeJobs.forEach(([jobId, job]) => {
       const slug = createSlug(job.title);
-      const lastModDate = job.createdAt 
-        ? new Date(job.createdAt).toISOString().split('T')[0]
+      const lastModDate = job.updatedAt || job.createdAt 
+        ? new Date(job.updatedAt || job.createdAt).toISOString().split('T')[0]
         : new Date().toISOString().split('T')[0];
       
+      // XML'e temiz format ile ekle (extra boşluk yok)
       xml += `
-  <url>
-    <loc>https://isilanlarim.org/ilan/${jobId}</loc>
-    <lastmod>${lastModDate}</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>`;
+<url>
+<loc>https://isilanlarim.org/ilan/${slug}</loc>
+<lastmod>${lastModDate}</lastmod>
+<changefreq>weekly</changefreq>
+<priority>0.8</priority>
+</url>`;
     });
 
     xml += `
@@ -145,9 +147,9 @@ exports.handler = async (event, context) => {
       },
       body: `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <!-- Generated on ${new Date().toISOString()} -->
-  <!-- Error: ${error.message} -->
-  <!-- Total active jobs: 0 -->
+<!-- Generated on ${new Date().toISOString()} -->
+<!-- Error: ${error.message} -->
+<!-- Total active jobs: 0 -->
 </urlset>`
     };
   }
