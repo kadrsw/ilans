@@ -18,9 +18,10 @@ export async function generateSitemapJobs(): Promise<string> {
           ...childSnapshot.val(),
         } as JobListing;
 
-        // ✅ GÜNCELLEME: İlanları filtreleyen 'active' kontrolü kaldırıldı.
-        // Artık tüm ilanlar sitemap'e eklenecek.
-        jobs.push(job);
+        // ✅ Sadece aktif ilanları dahil et - Google Search Console sorunu çözümü
+        if (job.status === 'active' && job.title && job.title.trim()) {
+          jobs.push(job);
+        }
       });
     }
 
@@ -32,8 +33,6 @@ export async function generateSitemapJobs(): Promise<string> {
 }
 
 async function generateSitemap(jobs: JobListing[]): Promise<string> {
-  const urls: string[] = [];
-
   // İlanları tarihe göre sırala (yeni olanlar önce)
   jobs.sort((a, b) => {
     const timeA = a.updatedAt || a.createdAt || 0;
@@ -41,25 +40,28 @@ async function generateSitemap(jobs: JobListing[]): Promise<string> {
     return timeB - timeA;
   });
 
-  // Her iş ilanı için URL oluştur
+  // ✅ XML sitemap oluştur - TEMİZ FORMAT (Google uyumlu)
+  let sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<!-- Generated on ${new Date().toISOString()} -->
+<!-- Total active jobs: ${jobs.length} -->`;
+
+  // ✅ Her iş ilanı için URL oluştur - SLUG KULLAN (jobId değil)
   jobs.forEach((job) => {
     const slug = generateSlug(job.title);
-    const lastmod = new Date(job.updatedAt || job.createdAt).toISOString();
+    const lastmod = new Date(job.updatedAt || job.createdAt).toISOString().split('T')[0];
 
-    urls.push(`
-    <url>
-      <loc>${SITE_URL}/ilan/${slug}</loc>
-      <lastmod>${lastmod}</lastmod>
-      <changefreq>daily</changefreq>
-      <priority>0.9</priority>
-    </url>`);
+    // ✅ XML'e temiz format ile ekle (extra boşluk yok)
+    sitemap += `
+<url>
+<loc>${SITE_URL}/ilan/${slug}</loc>
+<lastmod>${lastmod}</lastmod>
+<changefreq>weekly</changefreq>
+<priority>0.8</priority>
+</url>`;
   });
 
-  const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <!-- Generated on ${new Date().toISOString()} -->
-  <!-- Total jobs: ${jobs.length} -->
-  ${urls.join('')}
+  sitemap += `
 </urlset>`;
 
   return sitemap;
@@ -74,13 +76,13 @@ export async function updateSitemap(): Promise<void> {
     });
 
     if (response.ok) {
-      console.log('Sitemap başarıyla güncellendi');
+      console.log('✅ Sitemap başarıyla güncellendi');
       await notifySearchEngines();
     } else {
-      console.error('Sitemap güncelleme hatası:', response.status);
+      console.error('❌ Sitemap güncelleme hatası:', response.status);
     }
   } catch (error) {
-    console.error('Sitemap güncelleme hatası:', error);
+    console.error('❌ Sitemap güncelleme hatası:', error);
     throw error;
   }
 }
@@ -118,25 +120,25 @@ export async function notifySearchEngines(): Promise<void> {
   ];
 
   try {
-    // Arama motorlarına paralel olarak bildir
+    // ✅ Arama motorlarına paralel olarak bildir
     const promises = searchEngineUrls.map(async (url) => {
       try {
         const response = await fetch(url, {
           method: 'GET',
           mode: 'no-cors', // CORS hatalarını önlemek için
         });
-        console.log(`Sitemap bildirimi gönderildi: ${url}`);
+        console.log(`✅ Sitemap bildirimi gönderildi: ${url}`);
         return { url, success: true };
       } catch (error) {
-        console.error(`Sitemap bildirimi hatası (${url}):`, error);
+        console.error(`❌ Sitemap bildirimi hatası (${url}):`, error);
         return { url, success: false, error };
       }
     });
 
     const results = await Promise.allSettled(promises);
-    console.log('Arama motoru bildirimleri tamamlandı:', results);
+    console.log('🎯 Arama motoru bildirimleri tamamlandı:', results.length);
   } catch (error) {
-    console.error('Arama motoru bildirimi genel hatası:', error);
+    console.error('❌ Arama motoru bildirimi genel hatası:', error);
     throw error;
   }
 }
@@ -161,18 +163,18 @@ export async function updateSitemapIndex(): Promise<void> {
   </sitemap>
 </sitemapindex>`;
 
-  console.log('Sitemap index güncellendi');
+  console.log('📋 Sitemap index güncellendi');
 }
 
-// Yeni ilan eklendiğinde sitemap'i güncelle
+// ✅ Yeni ilan eklendiğinde sitemap'i güncelle
 export async function onJobAdded(jobData: JobListing): Promise<void> {
   try {
-    console.log('Yeni ilan eklendi, sitemap güncelleniyor:', jobData.title);
+    console.log('🆕 Yeni ilan eklendi, sitemap güncelleniyor:', jobData.title);
 
     // Sitemap'i güncelle
     await updateSitemap();
 
-    // Google'a hemen bildir - Çoklu sitemap ping
+    // ✅ Google'a hemen bildir - Çoklu sitemap ping
     const sitemapUrls = [
       `${SITE_URL}/sitemap.xml`,
       `${SITE_URL}/sitemap-jobs.xml`,
@@ -189,52 +191,52 @@ export async function onJobAdded(jobData: JobListing): Promise<void> {
           fetch(bingPingUrl, { method: 'GET', mode: 'no-cors' })
         ]);
         
-        console.log(`Sitemap ping gönderildi: ${url}`);
+        console.log(`🔔 Sitemap ping gönderildi: ${url}`);
       } catch (pingError) {
-        console.error(`Ping hatası (${url}):`, pingError);
+        console.error(`❌ Ping hatası (${url}):`, pingError);
       }
     });
 
     await Promise.allSettled(pingPromises);
-    console.log("Tüm arama motorlarına yeni ilan bildirimi gönderildi");
+    console.log("🌐 Tüm arama motorlarına yeni ilan bildirimi gönderildi");
 
-    console.log('Yeni ilan sitemap güncelleme tamamlandı');
+    console.log('✅ Yeni ilan sitemap güncelleme tamamlandı');
   } catch (error) {
-    console.error('Yeni ilan sitemap güncelleme hatası:', error);
+    console.error('❌ Yeni ilan sitemap güncelleme hatası:', error);
   }
 }
 
-// İlan güncellendiğinde sitemap'i güncelle
+// ✅ İlan güncellendiğinde sitemap'i güncelle
 export async function onJobUpdated(jobData: JobListing): Promise<void> {
   try {
-    console.log('İlan güncellendi, sitemap güncelleniyor:', jobData.title);
+    console.log('🔄 İlan güncellendi, sitemap güncelleniyor:', jobData.title);
     await updateSitemap();
-    console.log('İlan güncelleme sitemap tamamlandı');
+    console.log('✅ İlan güncelleme sitemap tamamlandı');
   } catch (error) {
-    console.error('İlan güncelleme sitemap hatası:', error);
+    console.error('❌ İlan güncelleme sitemap hatası:', error);
   }
 }
 
-// İlan silindiğinde sitemap'i güncelle
+// ✅ İlan silindiğinde sitemap'i güncelle  
 export async function onJobDeleted(jobId: string): Promise<void> {
   try {
-    console.log('İlan silindi, sitemap güncelleniyor:', jobId);
+    console.log('🗑️ İlan silindi, sitemap güncelleniyor:', jobId);
     await updateSitemap();
-    console.log('İlan silme sitemap tamamlandı');
+    console.log('✅ İlan silme sitemap tamamlandı');
   } catch (error) {
-    console.error('İlan silme sitemap hatası:', error);
+    console.error('❌ İlan silme sitemap hatası:', error);
   }
 }
 
-// Manuel sitemap güncelleme
+// ✅ Manuel sitemap güncelleme
 export async function manualSitemapUpdate(): Promise<boolean> {
   try {
-    console.log('Manuel sitemap güncelleme başlatıldı');
+    console.log('🔧 Manuel sitemap güncelleme başlatıldı');
     await updateSitemap();
-    console.log('Manuel sitemap güncelleme tamamlandı');
+    console.log('✅ Manuel sitemap güncelleme tamamlandı');
     return true;
   } catch (error) {
-    console.error('Manuel sitemap güncelleme hatası:', error);
+    console.error('❌ Manuel sitemap güncelleme hatası:', error);
     return false;
   }
 }
