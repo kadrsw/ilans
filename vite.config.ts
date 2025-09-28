@@ -1,19 +1,9 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { terser } from 'rollup-plugin-terser';
-import compression from 'vite-plugin-compression';
 
 export default defineConfig({
   plugins: [
-    react(),
-    compression({
-      algorithm: 'gzip',
-      ext: '.gz'
-    }),
-    compression({
-      algorithm: 'brotli',
-      ext: '.br'
-    })
+    react()
   ],
   optimizeDeps: {
     exclude: ['lucide-react'],
@@ -23,33 +13,12 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
-          'firebase-vendor': ['firebase/app', 'firebase/auth', 'firebase/database'],
-          'form-vendor': ['react-hook-form'],
-          'ui-vendor': ['lucide-react', 'clsx']
+          'react-vendor': ['react', 'react-dom'],
+          'firebase-vendor': ['firebase/app', 'firebase/auth', 'firebase/database']
         }
-      },
-      plugins: [
-        terser({
-          format: {
-            comments: false
-          },
-          compress: {
-            drop_console: true,
-            drop_debugger: true,
-            pure_funcs: ['console.log', 'console.info', 'console.debug']
-          }
-        })
-      ]
-    },
-    minify: 'terser',
-    terserOptions: {
-      compress: {
-        drop_console: true,
-        drop_debugger: true,
-        pure_funcs: ['console.log', 'console.info', 'console.debug']
       }
     },
+    minify: 'esbuild', // Terser yerine esbuild - çok daha hızlı
     assetsInlineLimit: 4096,
     cssCodeSplit: true,
     sourcemap: false
@@ -57,11 +26,6 @@ export default defineConfig({
   server: {
     hmr: {
       overlay: false
-    },
-    headers: {
-      'Cache-Control': 'public, max-age=31536000',
-      'X-Content-Type-Options': 'nosniff',
-      'X-Frame-Options': 'DENY'
     }
   }
 });
