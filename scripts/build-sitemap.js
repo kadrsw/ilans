@@ -24,12 +24,11 @@ async function generateJobsSitemap() {
     const app = initializeApp(firebaseConfig);
     const database = getDatabase(app);
     
-    // Aktif iş ilanlarını al
+    // Tüm iş ilanlarını al ve client-side'da filtrele
     const jobsRef = ref(database, 'jobs');
-    const activeJobsQuery = query(jobsRef, orderByChild('status'), equalTo('active'));
     
     console.log('📊 İş ilanları getiriliyor...');
-    const snapshot = await get(activeJobsQuery);
+    const snapshot = await get(jobsRef);
     
     if (!snapshot.exists()) {
       console.log('⚠️  Aktif iş ilanı bulunamadı');
@@ -46,7 +45,23 @@ async function generateJobsSitemap() {
     }
     
     const jobs = snapshot.val();
-    const jobEntries = Object.entries(jobs);
+    
+    if (!jobs) {
+      console.log('⚠️  Hiç iş ilanı bulunamadı');
+      
+      // Boş sitemap oluştur
+      const emptyXml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- Generated on ${new Date().toISOString()} -->
+  <!-- Total active jobs: 0 -->
+</urlset>`;
+      
+      saveSitemap(emptyXml);
+      return;
+    }
+    
+    // Aktif ilanları filtrele
+    const jobEntries = Object.entries(jobs).filter(([_, job]) => job.status === 'active');
     
     console.log(`✅ ${jobEntries.length} aktif ilan bulundu`);
     
