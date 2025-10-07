@@ -2,6 +2,9 @@ import json
 import google.generativeai as genai
 import time
 import os
+import re
+import uuid
+from datetime import datetime
 
 # Google Gemini API anahtarınızı buraya girin.
 API_KEY = "AIzaSyBeaq3AVf5FDGORNwF_ls2osRqEja2N_UU"  # Buraya kendi API anahtarınızı yapıştırın.
@@ -95,6 +98,158 @@ Sadece JSON formatında yanıt ver:
         time.sleep(5)
         return format_text_with_gemini(text_to_format, job_title, job_category, location)
 
+def find_company_name_from_description(description):
+    """
+    İlan açıklamasından şirket adını tespit etmeye çalışır.
+    """
+    if not description:
+        return "İşveren"
+
+    # Yaygın şirket adı kalıpları
+    patterns = [
+        r'(?:firma|şirket|kurye|transfer|lojistik)(?:\s+adı)?[:\s]+([A-ZÜĞÖŞÇI][A-ZÜĞÖŞÇIa-züğöşçı\s]{2,30})',
+        r'([A-ZÜĞÖŞÇI][A-ZÜĞÖŞÇIa-züğöşçı\s]{2,30})(?:\s+(?:firması|şirketi|kurye|transfer|lojistik))',
+        r'(?:iletişim|başvuru)[:\s]+([A-ZÜĞÖŞÇI][A-ZÜĞÖŞÇIa-züğöşçı\s]{2,30})',
+    ]
+
+    for pattern in patterns:
+        match = re.search(pattern, description, re.IGNORECASE)
+        if match:
+            company_name = match.group(1).strip()
+            # Çok kısa veya çok uzun isimleri filtrele
+            if 3 <= len(company_name) <= 50:
+                return company_name
+
+    # Eğer hiç eşleşme yoksa, açıklamanın ilk cümlesindeki büyük harfli kelimeleri kontrol et
+    first_sentence = description.split('.')[0] if '.' in description else description[:100]
+    capital_words = re.findall(r'\b[A-ZÜĞÖŞÇI]{2,}(?:\s+[A-ZÜĞÖŞÇI]{2,})*\b', first_sentence)
+
+    if capital_words:
+        # En uzun büyük harfli kelime grubunu al
+        longest = max(capital_words, key=len)
+        if 3 <= len(longest) <= 50:
+            return longest
+
+    return "İşveren"
+
+def find_salary_from_description(description):
+    """
+    İlan açıklamasından maaş bilgisini çıkarmaya çalışır.
+    """
+    if not description:
+        return "0"
+
+    # Maaş kalıpları
+    salary_patterns = [
+        r'(?:maaş|ücret|gelir)[:\s]*(\d{1,3}(?:\.\d{3})*(?:\s*-\s*\d{1,3}(?:\.\d{3})*)?)\s*(?:TL|₺|lira)',
+        r'(\d{1,3}(?:\.\d{3})*(?:\s*-\s*\d{1,3}(?:\.\d{3})*)?)\s*(?:TL|₺|lira)',
+        r'(?:aylık|brüt|net)[:\s]*(\d{1,3}(?:\.\d{3})*)\s*(?:TL|₺)',
+        r'(\d{2,3}\.?\d{3})\s*(?:TL|₺)',
+    ]
+
+    for pattern in salary_patterns:
+        match = re.search(pattern, description, re.IGNORECASE)
+        if match:
+            salary_str = match.group(1).strip()
+            # Tutarlılık kontrolü - makul bir maaş aralığında mı?
+            try:
+                # Sayıya dönüştür ve kontrol et
+                salary_num = int(salary_str.replace('.', '').replace(' ', ''))
+                if 5000 <= salary_num <= 500000:  # Makul bir aralık
+                    return f"{salary_str}₺"
+            except:
+                pass
+
+    # Saatlik ücret kontrolü
+    hourly_pattern = r'(?:saatlik|saat\s+başı)[:\s]*(\d{1,4})\s*(?:TL|₺)'
+    match = re.search(hourly_pattern, description, re.IGNORECASE)
+    if match:
+        return f"Saatlik {match.group(1)}₺"
+
+    # Paket başı ücret kontrolü
+    package_pattern = r'(?:paket\s+başı|paket)[:\s]*(\d{1,4})\s*(?:TL|₺)'
+    match = re.search(package_pattern, description, re.IGNORECASE)
+    if match:
+        return f"Paket başı {match.group(1)}₺"
+
+    return "0"
+
+def generate_unique_id(created_at=None):
+    """
+    Benzersiz bir iş ilanı ID'si oluşturur.
+    Firebase tarzı (-XXXXXXXXXXXX) format kullanır.
+    """
+    if created_at:
+        # createdAt timestamp'ini kullanarak deterministic bir ID oluştur
+        timestamp_part = str(created_at)[-8:]
+        random_part = uuid.uuid4().hex[:12]
+        return f"-{timestamp_part}{random_part}"
+    else:
+        # Tamamen rastgele bir ID oluştur
+        return f"-{uuid.uuid4().hex[:20]}"
+
+def convert_employment_type_to_english(type_turkish):
+    """
+    Türkçe çalışma tipini İngilizce standart değere dönüştürür.
+    """
+    type_map = {
+        'Tam Zamanlı': 'FULL_TIME',
+        'Part-time': 'PART_TIME',
+        'Part Time': 'PART_TIME',
+        'Yarı Zamanlı': 'PART_TIME',
+        'Uzaktan': 'REMOTE',
+        'Remote': 'REMOTE',
+        'Freelance': 'CONTRACTOR',
+        'Sözleşmeli': 'CONTRACTOR',
+        'Staj': 'INTERN',
+        'İntörnlük': 'INTERN'
+    }
+
+    return type_map.get(type_turkish, 'FULL_TIME')
+
+def clean_and_enrich_job_data(item, new_title, new_description):
+    """
+    İş ilanı verisini temizler ve zenginleştirir.
+    """
+    # 1. Title ve Description güncelle
+    item['title'] = new_title
+    item['description'] = new_description
+
+    # 2. Şirket adı temizliği/doldurulması
+    if not item.get('company') or item['company'] == "" or item['company'] == "Şirket Belirtilmemiş":
+        detected_company = find_company_name_from_description(new_description)
+        item['company'] = detected_company
+        print(f"  🏢 Şirket adı tespit edildi: {detected_company}")
+
+    # 3. Maaş temizliği/doldurulması
+    if not item.get('salary') or item['salary'] == "0" or item['salary'] == "":
+        detected_salary = find_salary_from_description(new_description)
+        if detected_salary != "0":
+            item['salary'] = detected_salary
+            print(f"  💰 Maaş bilgisi tespit edildi: {detected_salary}")
+
+    # 4. Benzersiz jobId oluştur
+    if not item.get('jobId') or item['jobId'] == "":
+        created_at = item.get('createdAt')
+        unique_id = generate_unique_id(created_at)
+        item['jobId'] = unique_id
+        print(f"  🆔 Benzersiz ID oluşturuldu: {unique_id}")
+
+    # 5. Employment type'ı İngilizce'ye çevir (opsiyonel - yorum satırından çıkarabilirsiniz)
+    # if item.get('type'):
+    #     english_type = convert_employment_type_to_english(item['type'])
+    #     item['type_en'] = english_type
+
+    # 6. createdAt yoksa ekle
+    if not item.get('createdAt'):
+        item['createdAt'] = int(datetime.now().timestamp() * 1000)
+
+    # 7. status yoksa ekle
+    if not item.get('status'):
+        item['status'] = 'active'
+
+    return item
+
 def validate_optimization(original_title, new_title, original_desc, new_desc):
     """
     Optimizasyon kalitesini değerlendir
@@ -171,11 +326,10 @@ def main():
             else:
                 if issues:
                     print(f"⚠️ Kalite uyarıları: {', '.join(issues)}")
-                
-                # Sadece optimize edilmiş değerleri kaydet
-                item['title'] = new_title
-                item['description'] = new_description
-                
+
+                # VERİ TEMİZLEME VE ZENGİNLEŞTİRME
+                item = clean_and_enrich_job_data(item, new_title, new_description)
+
                 success_count += 1
                 print(f"✅ Optimize edildi")
                 print(f"  Yeni başlık ({len(new_title)} kar): {new_title}")
